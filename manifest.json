@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.labrat-0.omacircuit",
+  "name": "Omacircuit",
+  "version": "0.1.0",
+  "author": "Mick Donahue",
+  "license": "MIT",
+  "description": "A live-track puzzle for omarchy-shell. Cars never stop. You rotate track tiles under them to steer them onto coins, and rotating a tile a car is standing on wrecks it. Opens as an ordinary tiled window and unloads when you close it. Summon with: omarchy-shell shell toggle io.github.labrat-0.omacircuit",
+  "kinds": [
+    "panel",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "panel": "Panel.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Omacircuit",
+    "description": "Open the Omacircuit live-track puzzle",
+    "category": "Fun",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
