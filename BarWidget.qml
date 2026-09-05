@@ -24,9 +24,9 @@ BarWidget {
     tooltipText: "Omacircuit"
     fixedWidth: root.bar && root.bar.vertical ? -1 : Style.space(27)
     fixedHeight: root.bar && root.bar.vertical ? Style.space(26) : -1
-    onPressed: function(b) {
+    onPressed: function() {
       if (!root.bar) return
-      root.bar.run("omarchy-shell shell toggle io.github.labrat-0.omacircuit")
+      root.bar.run("omarchy-shell shell toggle " + root.moduleName)
     }
   }
 }

@@ -5,8 +5,34 @@ move is turning a tile under them, and the tile a car is standing on is the one
 tile that costs you the run.
 
 It opens as an ordinary window, so Hyprland tiles it with everything else.
-Nothing is bundled, and every colour comes from the active Omarchy theme, so
-the board recolours with the desktop.
+Nothing is bundled, and every color comes from the active Omarchy theme, so
+the board recolors with the desktop.
+
+## Preview
+
+<p align="center">
+  <img src="preview.png" alt="Omacircuit on Endurance: three cars, coins, obstacles, and a live route bending toward a hazard" width="900">
+</p>
+
+<p align="center">
+  <img src="docs/board-lap.png" alt="A fresh Endurance board: the rim circuit is safe forever and reaches no interior tile" width="440">
+  &nbsp;
+  <img src="docs/how-it-works.png" alt="The in-game help overlay, reached with ?" width="300">
+</p>
+
+```bash
+omarchy plugin add https://github.com/labrat-0/omarchy-omacircuit --enable
+```
+
+That adds a 🏁 button to the bar. Click it, or:
+
+```bash
+omarchy-shell shell toggle io.github.labrat-0.omacircuit
+```
+
+The plugin is pure QML on modules Omarchy's shell already ships. It does not
+reach the network, does not change `~/.config/omarchy/shell.json` itself, and
+writes only its own high-score file under `~/.local/state/omacircuit/`.
 
 ## How it plays
 
@@ -19,16 +45,37 @@ Each tile cycles through three states: a crossing, one diagonal deflector, the
 other. Every tile carries rail on all four edges, so a click can never leave a
 rail end hanging; all it changes is which way traffic bends.
 
-The coloured trail ahead of each car is where it is actually going, fading with
-distance. Where a bent route runs off the board, the trail turns red and the
-exit tile pulses. That preview is the difference between a puzzle and a guess:
-the two-flip move is invisible without it.
+The board wraps rather than ending — drive off one edge and the car reappears
+on the opposite one, still mid-lap. There is no wall. What you have to avoid
+instead is fixed on the board from the start: a handful of obstacles, placed
+once per game on cells the opening loop doesn't already reach. Cruise has
+none; the other levels add more of them the bigger the board gets.
 
-Three ways to lose:
+The colored trail ahead of each car is where it is actually going, fading with
+distance. Where a bent route is about to drive into an obstacle, the trail
+turns red and the last safe tile pulses. That preview is the difference
+between a puzzle and a guess: the two-flip move is invisible without it.
+
+Three ways to wreck a car:
 
 - Turn the tile a car is standing on. The cursor turns red when it is on one.
-- Let a car run off the board.
+- Drive a car into an obstacle.
 - Put two cars in the same place.
+
+Any of those costs the run outright on Cruise, which never has a second car
+to fall back on. Everywhere else, a wreck with a spare car still on the board
+costs only that car — it's gone, the board shakes and flashes exactly like a
+real wreck, and the lap keeps going with whatever traffic is left. A row of
+dots in the header, one per life the level can field, tracks this at a
+glance: filled in that car's own color while it's alive, hollow once it's
+gone. The run itself only ends when the last car goes.
+
+A wrecked car isn't gone for the rest of the run, either. Once you've lost
+one, the next six coins you collect earn it back — the next hollow dot fills
+in with the coin color as that count climbs — up to the level's own cap on
+how many cars it ever fields. Score alone stops being what adds a car the
+moment you've lost one; a flat run of coins does instead, so recovering a
+life is a real goal rather than an automatic side effect of playing on.
 
 ## One circuit, no modes
 
@@ -76,19 +123,52 @@ run; welded geometry is just geometry.
 
 ## Levels
 
-Press `1`, `2`, `3`, or click the chip in the header. Each level moves the board,
-the clock and the traffic together, because what makes this hard is how much of
-the board is off-limits at once. Best score is kept per level.
+Press `1`, `2`, `3`, `4`, or click the chip in the header. Each level moves the
+board, the clock and the traffic together, because what makes this hard is how
+much of the board is off-limits at once. Best score, and the top five scores,
+are kept per level.
 
-| Level | Board | Pace | Coin life | Extra cars | Route shown |
-| --- | --- | --- | --- | --- | --- |
-| Cruise | 6x5 | 840ms/tile | 24s | never | 16 tiles |
-| Circuit | 8x6 | 700ms/tile | 16s | at 5 and 12 coins | 10 tiles |
-| Grand Prix | 10x7 | 560ms/tile | 12s | at 3 and 8 coins | 6 tiles |
+| Level | Board | Pace | Coin life | Extra cars | Obstacles | Route shown |
+| --- | --- | --- | --- | --- | --- | --- |
+| Cruise | 6x5 | 1020ms/tile | 24s | never | 0 | 16 tiles |
+| Circuit | 8x6 | 850ms/tile | 16s | at 5 and 12 coins | 1 | 10 tiles |
+| Grand Prix | 10x7 | 680ms/tile | 12s | at 3 and 8 coins | 2 | 6 tiles |
+| Endurance | 12x8 | 680ms/tile | 12s | at 4 and 9 coins | 3 | 6 tiles |
 
-Cruise never adds a second car, so the collision rule does not exist there, and
-its preview runs far enough ahead to show both halves of a two-flip move before
-you commit to either.
+Cruise never adds a second car and never places an obstacle, so the only way
+to lose there is turning the tile a car is standing on — it stays the
+zero-pressure level that just teaches the deflector. Its preview also runs far
+enough ahead to show both halves of a two-flip move before you commit to
+either. Endurance is the same pace as Grand Prix on purpose: the
+difficulty there is meant to come from having twice the board to route across,
+not from also being faster on top of that — piling both on at once is what made
+Circuit and Grand Prix feel unfair rather than hard.
+
+## High scores
+
+Every wreck that beats the fifth-best run on that level (or every wreck at
+all, until a level has five) stops for a name: type it normally, up to eight
+characters, `Enter` to save it or `Escape` to skip. The board for whichever
+level you just played sits on the wrecked screen after that, win or not, so
+the number you were chasing stays on screen instead of disappearing the
+moment you miss it. Kept per level, five deep, alongside the single best
+score in the header.
+
+Gold, silver and bronze medals mark the top three, both on that post-wreck
+list and in a live top-three strip above the board during play, so the run
+you're chasing is visible while you're still chasing it, not just after.
+
+## Start menu
+
+Opens on launch: the level's top three, and a pick of which of the three
+car silhouettes and colors is yours. Whichever you choose stays `cars[0]`
+for the run — the one that gets the light-to-dark paint job instead of a
+flat tint — and the other two fill in with the remaining colors for
+traffic. The pick is remembered between sessions.
+
+Arrows (or click) to choose, `Space` or `Enter` to start. Reopen it anytime
+mid-run from the **garage** button under the board — closing it again drops
+you back into the same run exactly where you left it, nothing resets.
 
 ## Look
 
@@ -107,7 +187,7 @@ Neon is additive, which means it only works on a dark ground: a low-alpha halo
 over black adds light, but the same wash over white adds nothing and the whole
 three-layer stack collapses into a pale smudge. On a light theme the halos
 therefore switch off, the "core" runs toward ink instead of toward white, and
-the car's halo becomes a knockout in the board colour. The same code draws neon
+the car's halo becomes a knockout in the board color. The same code draws neon
 in the dark and line work on paper.
 
 The grid is a field of dots at the tile corners rather than a lattice of
@@ -125,11 +205,15 @@ The cars are die-cast racers seen from above: a narrow body with the wheels
 stuck out past it and the rear pair visibly fatter than the front, plus a front
 and rear wing. Three silhouettes (Formula, Stocker, Speeder) rather than three
 tints, because on a board where two cars can be a few pixels apart, hue alone
-does not separate them and a colourblind reading collapses two of them outright.
+does not separate them and a colorblind reading collapses two of them outright.
+Yours is the one with the paint job: a light-to-dark gloss gradient across the
+body instead of the flat tint the traffic cars use, and teal rather than the
+purple it started as — a single flat color didn't read as "yours" among the
+traffic, and the gradient is what fixes that, not the hue by itself.
 
 Coins carry the **official Omarchy mark**, struck into the face as a darkened
 cut of the coin's own metal. It is the real asset off the installed tree
-(`$OMARCHY_PATH/icon.png`), colourised at runtime, and its width tracks the same
+(`$OMARCHY_PATH/icon.png`), colorized at runtime, and its width tracks the same
 factor the disc's does so it turns with the coin instead of sitting on top of it.
 
 Each car leaves a **dot matrix wake**: positions snapped to a lattice of eight
@@ -154,7 +238,7 @@ it straight over both.
 | Arrows, or `hjkl` | Move the cursor |
 | `Space`, `Enter` | Turn the tile under the cursor |
 | Click | Turn that tile, and park the cursor on it |
-| `1` `2` `3` | Level |
+| `1` `2` `3` `4` | Level |
 | `p` | Pause |
 | `r` | New board |
 | `?` | Help |
@@ -162,6 +246,9 @@ it straight over both.
 
 On an overlay (paused, wrecked, help) `Space` dismisses it instead of turning a
 tile, which is the only reading of the key that is never ambiguous on screen.
+Entering a high-score name is the one exception: the keys above are
+reassigned while you type (up to eight characters) until you confirm or
+cancel — see [High scores](#high-scores).
 
 ## Why coins avoid the live route
 
@@ -208,6 +295,13 @@ No external dependencies — the plugin is pure QML, built entirely on modules
 Omarchy's shell already ships (`QtQuick.Shapes`, `QtQuick.Particles`,
 `QtQuick.Effects`). Nothing to install beyond the plugin itself.
 
+Before publishing a local checkout, the same check the marketplace and
+`omarchy plugin add` run:
+
+```bash
+omarchy plugin validate .
+```
+
 ## Removal
 
 ```bash
@@ -216,9 +310,24 @@ omarchy plugin remove io.github.labrat-0.omacircuit
 
 That disables the plugin and deletes the checkout (or unlinks it, if you
 installed it as a symlinked clone for development). It also leaves the bar
-without its 🏁 button. Best score and level are kept at
+without its 🏁 button. High scores are kept at
 `~/.local/state/omacircuit/state.json` — remove that file too if you want a
-clean slate rather than just reinstalling the plugin.
+clean slate rather than just reinstalling the plugin:
+
+```bash
+rm -rf ~/.local/state/omacircuit
+```
+
+## What it writes, and what it does not
+
+- `~/.local/state/omacircuit/state.json` — best score and top-five names per
+  level, last level, and the car you picked in the garage. Written when a
+  best is beaten, a name is saved, the level changes, or you pick a car.
+
+Nothing else on the system is touched. The plugin makes **no network
+requests**, needs no extra packages or credentials, does not rewrite
+`~/.config/omarchy/shell.json`, and starts no process beyond a `mkdir -p` of
+that state directory. Scores are user-owned data, not configuration.
 
 ## Developing it
 
@@ -249,5 +358,7 @@ TypeError: Cannot assign to read-only property "omarchyPath"
 | `manifest.json` | Plugin manifest: `panel` + `bar-widget`, nothing kept loaded |
 | `Panel.qml` | The whole game: model, board, window, keys |
 | `BarWidget.qml` | The 🏁 bar button; owns no state, just toggles the panel |
+| `preview.png` | Marketplace card/detail source (unoptimized screenshot) |
+| `docs/` | Extra README screenshots; not used by the marketplace |
 | `LICENSE` | MIT |
-| `~/.local/state/omacircuit/state.json` | Best score, per level |
+| `~/.local/state/omacircuit/state.json` | Best score, top-five names, last level, chosen car |

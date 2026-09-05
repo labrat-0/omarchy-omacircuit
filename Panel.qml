@@ -77,12 +77,12 @@ Item {
   property string fontFamily: Style.font.menuFamily
   property int contentMargin: Style.spacing.panelPadding
 
-  // A colour written as a string has no r/g/b members, so the arithmetic in
+  // A color written as a string has no r/g/b members, so the arithmetic in
   // mix() and fade() silently produced NaN and painted opaque black. Every
   // neon core in this file goes through core() -> mix(c, "#ffffff", ...), so
   // the brightest layer of the glow was black on all of them: the cars carried
   // a black slug where their core should be. Qt.lighter at factor 1.0 is the
-  // cheapest string-to-colour conversion available here.
+  // cheapest string-to-color conversion available here.
   function toColor(c) { return typeof c === "string" ? Qt.lighter(c, 1.0) : c }
 
   function lum(c) { return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b }
@@ -133,44 +133,49 @@ Item {
   // a neon set that drifts with an arbitrary accent stops being neon.
   // gridNeon is chrome now, not track: the frame, dividers and inactive
   // chip borders. The rail itself moved to its own hues (railIdle/railNeon,
-  // below) so recolouring one does not recolour the other.
+  // below) so recoloring one does not recolor the other.
   readonly property color gridNeon:   root.darkSurface ? "#3f6ea8" : "#1e4c63"
   // An icy electric blue for the rail at rest — track lighting, not slate.
   // Kept out of both the background jade (dotNeon, below) and the frame's
   // navy (gridNeon, above) by leaning much lighter and more saturated than
-  // either: this is meant to be the brightest cool colour on the board,
+  // either: this is meant to be the brightest cool color on the board,
   // since it is now drawn as dots rather than a dim stroke and needs to
   // read as "lit" rather than as "the same calm chrome as everything else."
   readonly property color railIdle:   root.darkSurface ? "#7dd3fc" : "#0369a1"
   // The turn flash and the outbound shockwave both use this instead: green,
-  // because it is the one colour on the board that means "go" and nothing
+  // because it is the one color on the board that means "go" and nothing
   // else here claims it. Turning a tile is the one action in the whole game,
-  // so the moment it happens gets a colour that says exactly that, and
+  // so the moment it happens gets a color that says exactly that, and
   // showing it on the rail itself is what answers "which way did it just
   // point" without needing a second indicator. Kept out of the resting rail
   // on purpose — green at any alpha strong enough to see reads as loud, and
   // loud is what a turn should announce, not the idle board.
   readonly property color railNeon:   root.darkSurface ? "#22c55e" : "#15803d"
   // The corner dots and hairlines are substrate, not track and not a playing
-  // piece. Neutral grey was the safe fix for the grid reading as "the same
-  // colour as the car," but labrat wanted the dot matrix back to being an
-  // actual colour rather than grey — and now that the car that collided with
+  // piece. Neutral gray was the safe fix for the grid reading as "the same
+  // color as the car," but labrat wanted the dot matrix back to being an
+  // actual color rather than gray — and now that the car that collided with
   // it (cyan) has moved to violet, the original jade is safe again: nothing
   // else on the board is teal-green, cyan-family included.
   readonly property color dotNeon:    root.darkSurface ? "#2fae87" : "#1f6b52"
-  // Cyan was the collision (see dotNeon above) and labrat didn't like it on
-  // its own merits either, so the lead car moved to violet — the one hue
-  // freed up when the cursor moved off it to orange, and far enough from
-  // both the danger pink and the rail green to stay unambiguous.
+  // Cyan was the collision with the background dots, and violet after it
+  // was also rejected on its own merits — two hues burned on the lead car
+  // already, so this one is teal, the one wedge of the wheel nothing else on
+  // the board sits near: greener than the icy rail-blue, bluer than the
+  // jade background, and nowhere close to the other two cars or any UI
+  // accent. The lead car also gets a gradient finish instead of a flat fill
+  // (see Racer, below) — "why single colored cars" was a fair question,
+  // and the answer for the one you're actually flying is that it shouldn't
+  // be, even though the two traffic cars still are.
   readonly property var carHues: root.darkSurface
-    ? ["#a78bfa", "#f472b6", "#a3e635"]
-    : ["#6d28d9", "#be185d", "#4d7c0f"]
+    ? ["#2dd4bf", "#f472b6", "#a3e635"]
+    : ["#0f766e", "#be185d", "#4d7c0f"]
   readonly property color coinColor:   root.darkSurface ? "#fbbf24" : "#b45309"
   readonly property color dangerColor: root.darkSurface ? "#ff2d6f" : "#be123c"
   readonly property color cursorColor: root.darkSurface ? "#fb923c" : "#c2410c"
   readonly property var levelHues: root.darkSurface
-    ? ["#a3e635", "#22d3ee", "#ff2d6f"]
-    : ["#4d7c0f", "#0e7490", "#be123c"]
+    ? ["#a3e635", "#22d3ee", "#ff2d6f", "#e879f9"]
+    : ["#4d7c0f", "#0e7490", "#be123c", "#a21caf"]
 
   // A neon core is the hue pushed most of the way to white. Drawn on top of a
   // wider, dimmer stroke of the hue itself, that is the whole trick.
@@ -194,18 +199,18 @@ Item {
   //
   // Three cars have to be told apart on a board where two of them may be a
   // few pixels apart, and hue alone does not survive that: on the light
-  // palette the three are all mid-tone, and a colourblind reading collapses
-  // two of them outright. So the cars differ by silhouette first and colour
+  // palette the three are all mid-tone, and a colorblind reading collapses
+  // two of them outright. So the cars differ by silhouette first and color
   // second. Each is a closed outline in cell units, nose pointing along +x,
   // measured from the middle of the tile; the delegate supplies the heading.
   // Hot Wheels rather than aircraft: a die-cast racer read from above is a
   // narrow body with the wheels stuck out past it, and the rear pair visibly
-  // fatter than the front. The exaggeration is the point, so the rear tyres and
+  // fatter than the front. The exaggeration is the point, so the rear tires and
   // the wing are drawn bigger than any real car would carry them.
   //
   // Each body is a closed outline in cell units, nose pointing along +x,
   // measured from the middle of the tile; the delegate supplies the heading.
-  // Wheels and wings are [centre x, centre y, width, height] in the same units
+  // Wheels and wings are [center x, center y, width, height] in the same units
   // and are laid under the body.
   readonly property var carBodies: [
     // Formula — long nose, shouldered cockpit, waisted tail.
@@ -255,13 +260,25 @@ Item {
   // second car, so the collision rule simply does not exist there, and its
   // route preview runs far enough ahead to show both halves of a two-flip move
   // before you commit to either.
+  // `tile` is ~20% slower across every level than the original pass — "the
+  // speed is too fast" landed after the 3-car relief below was already in,
+  // so this is the base pace itself, not just what happens once traffic
+  // stacks up.
   readonly property var levels: [
     { key: "cruise",  name: "Cruise",
-      cols: 6, rows: 5, tile: 840, coin: 24000, coinsWanted: 2, second: 999, third: 999, look: 16, think: 760 },
+      cols: 6, rows: 5, tile: 1020, coin: 24000, coinsWanted: 2, second: 999, third: 999, look: 16, obstacles: 0 },
     { key: "circuit", name: "Circuit",
-      cols: 8, rows: 6, tile: 700, coin: 16000, coinsWanted: 2, second: 5,   third: 12,  look: 10, think: 540 },
+      cols: 8, rows: 6, tile: 850, coin: 16000, coinsWanted: 2, second: 5,   third: 12,  look: 10, obstacles: 1 },
     { key: "grandprix", name: "Grand Prix",
-      cols: 10, rows: 7, tile: 560, coin: 12000, coinsWanted: 3, second: 3,  third: 8,   look: 6, think: 380 }
+      cols: 10, rows: 7, tile: 680, coin: 12000, coinsWanted: 3, second: 3,  third: 8,   look: 6,  obstacles: 2 },
+    // The bigger map asked for outright. Traffic pressure stays level with
+    // Grand Prix (same tile pace, thresholds nudged back slightly) rather
+    // than escalating further — the extra difficulty here is meant to come
+    // from having more board to route across, not from being faster on top
+    // of that. Piling speed onto size is exactly the compounding labrat
+    // flagged as what makes Circuit hard to control in the first place.
+    { key: "endurance", name: "Endurance",
+      cols: 12, rows: 8, tile: 680, coin: 12000, coinsWanted: 4, second: 4,  third: 9,   look: 6,  obstacles: 3 }
   ]
 
   property int level: 1
@@ -269,6 +286,10 @@ Item {
   readonly property color levelColor: root.levelHues[Math.max(0, Math.min(root.levelHues.length - 1, root.level))]
 
   function setLevel(i) {
+    // Don't abandon a high-score name mid-entry. The chips stay visible on
+    // the wrecked card, and a click used to call newGame() which wiped the
+    // qualifying run without saving it.
+    if (root.highScoreEntry) return
     var n = Math.max(0, Math.min(root.levels.length - 1, i))
     if (n === root.level) return
     root.level = n
@@ -296,7 +317,7 @@ Item {
 
   // Edge midpoints in unit tile coordinates. A car's path across a tile is a
   // quadratic Bezier from its entry midpoint to its exit midpoint with the
-  // control point at the tile centre, which draws a clean quarter arc through
+  // control point at the tile center, which draws a clean quarter arc through
   // a deflector and degenerates to a straight line through a crossing.
   function edgeMid(e) {
     if (e === root.eN) return { x: 0.5, y: 0.0 }
@@ -317,6 +338,10 @@ Item {
     }
   }
 
+  // The board wraps rather than ending. A car that drives off one edge
+  // reappears on the opposite one, same row or column, still mid-lap — there
+  // is no more "off the board" to crash into. `isObstacle()`, below, is what
+  // replaces it as the thing routing has to actually avoid.
   function neighbor(cell, edge) {
     var x = cell % root.cols
     var y = Math.floor(cell / root.cols)
@@ -324,7 +349,8 @@ Item {
     else if (edge === root.eS) y += 1
     else if (edge === root.eE) x += 1
     else x -= 1
-    if (x < 0 || y < 0 || x >= root.cols || y >= root.rows) return -1
+    x = (x + root.cols) % root.cols
+    y = (y + root.rows) % root.rows
     return x + y * root.cols
   }
 
@@ -446,12 +472,133 @@ Item {
   property string phase: "running"    // running | paused | crashed
   property string crashReason: ""
   property int crashCell: -1
+  // A spare car turns a wreck into a lost car instead of a lost run. Once
+  // that has happened this game, the normal score-ramp stops being what
+  // tops traffic back up (see `collect()`): the ramp's thresholds are
+  // absolute scores already climbing regardless, so left alone it would
+  // hand the car straight back the moment the next coin landed. Instead a
+  // flat run of coins buys the next one back, same as an arcade extra life.
+  property bool carLost: false
+  property int coinsForLife: 6
+  property int coinsSinceCrash: 0
+  // The ramp already caps out here for every level but Cruise (whose
+  // thresholds are the 999 "never" sentinel) — probing at 900 rather than
+  // hardcoding 3 keeps this honest if a level's thresholds ever change.
+  readonly property int maxCars: root.carCountFor(900)
+  // Bumped on every crash, fatal or not, so the shake/flash/debris can react
+  // to a wreck even when it costs only a car and phase never leaves "running".
+  property int crashPulse: 0
   property int score: 0
   property var bests: ({})
   property bool helpOpen: false
+  // The start menu: up at cold boot, and reopenable via the "garage" button
+  // in the live readout. Which silhouette/hue is "yours" (root.cars[0],
+  // always the original car — see variantFor()) rather than tied to array
+  // position the way traffic cars are.
+  //
+  // Defaults false and flips true in Component.onCompleted below rather
+  // than defaulting true here: the overlay's fade-in only runs off
+  // onVisibleChanged, a change signal that never fires for a property's
+  // initial constructed value, only for a real transition. Starting this
+  // true made the overlay's `visible` true from construction with nothing
+  // ever toggling it, so the scrim sat at its declared opacity: 0 forever —
+  // technically "shown," but invisible.
+  property bool menuOpen: false
+  property int chosenCar: 0
+
+  // Each car carries its own `variant` (silhouette + hue) and `player` flag.
+  // Index 0 is *not* identity: splicing a wrecked player used to promote the
+  // next traffic car into cars[0], which then inherited the player's paint
+  // job and silhouette via the old index-based lookup.
+  function variantFor(i) {
+    var car = root.cars[i]
+    if (car && typeof car.variant === "number")
+      return Math.max(0, Math.min(2, car.variant | 0))
+    if (i === 0) return root.chosenCar
+    var others = [0, 1, 2].filter(function(v) { return v !== root.chosenCar })
+    return others[(i - 1) % others.length]
+  }
+
+  function carColor(i) {
+    return root.carHues[root.variantFor(i) % root.carHues.length]
+  }
+
+  function hasPlayer() {
+    for (var i = 0; i < root.cars.length; i++)
+      if (root.cars[i] && root.cars[i].player) return true
+    return false
+  }
+
+  function nextTrafficVariant() {
+    var used = {}
+    used[root.chosenCar] = true
+    for (var i = 0; i < root.cars.length; i++) {
+      if (root.cars[i] && typeof root.cars[i].variant === "number")
+        used[root.cars[i].variant] = true
+    }
+    for (var v = 0; v < 3; v++) if (!used[v]) return v
+    return (root.chosenCar + 1) % 3
+  }
+
+  function setChosenCar(i) {
+    i = Math.max(0, Math.min(2, i | 0))
+    if (i === root.chosenCar) return
+    root.chosenCar = i
+    var traffic = [0, 1, 2].filter(function(v) { return v !== i })
+    var t = 0
+    var next = []
+    for (var k = 0; k < root.cars.length; k++) {
+      var c = Object.assign({}, root.cars[k])
+      if (c.player) c.variant = i
+      else { c.variant = traffic[t % traffic.length]; t++ }
+      next.push(c)
+    }
+    root.cars = next
+    root.writeState()
+  }
+
+  // Top five per level, `{name, score}` sorted high to low. `bests` above is
+  // just "your single best," kept for the header readout; this is the full
+  // arcade-style board, keyed the same way.
+  property var highScores: ({})
+  // Non-null only on the wreck that just qualified: `{text: "..."}`, free
+  // text up to 8 characters (handleKey() enforces the length as you type).
+  // Cleared by commitHighScore(); newGame() also clears it defensively since
+  // the level chips are clickable regardless of phase and a click there
+  // would otherwise abandon an entry mid-flight without resetting anything.
+  property var highScoreEntry: null
+
+  function qualifiesForHighScore(s, key) {
+    if (s <= 0) return false
+    var list = root.highScores[key] || []
+    if (list.length < 5) return true
+    return s > list[list.length - 1].score
+  }
+
+  function commitHighScore() {
+    var e = root.highScoreEntry
+    if (!e) return
+    var list = (root.highScores[root.spec.key] || []).slice()
+    var name = root.sanitizeName(e.text).trim()
+    if (name === "") { root.highScoreEntry = null; return }
+    list.push({ name: name, score: root.score })
+    list.sort(function(a, b) { return b.score - a.score })
+    list = list.slice(0, 5)
+    var next = {}
+    for (var k in root.highScores) next[k] = root.highScores[k]
+    next[root.spec.key] = list
+    root.highScores = next
+    root.highScoreEntry = null
+    root.writeState()
+  }
 
   property var cars: []
   property var coins: []
+  // Fixed hazards, placed once per board and never moving or expiring —
+  // terrain, not a timer. A plain array of cell indices is enough: unlike
+  // coins there is no per-obstacle state to carry, so there is nothing an
+  // object would buy over a number.
+  property var obstacles: []
   property var route: []
   property int frame: 0
 
@@ -471,7 +618,7 @@ Item {
   // background dust is not a trade worth making, so the phase is now a
   // fixed constant: the wave shape stays, the animation driving it doesn't.
   // If this needs to move again, it should be a narrow, rare trigger (e.g.
-  // only on a turn) rather than a perpetual clock — see [[omacircuit-plugin]].
+  // only on a turn) rather than a perpetual clock.
   readonly property real wavePhase: 0.7
 
   // The turn flash, as one shared value rather than one per tile. Only one
@@ -499,8 +646,11 @@ Item {
   // reassigned once per lattice crossing rather than once per frame.
   // The array's own length is the lifetime, oldest at the front.
   property var sparks: []
-  readonly property int sparksPerCar: 46
-  readonly property int dotStep: 8
+  // Denser lattice (finer-grained dots) with the trail cap raised to match,
+  // so the wake covers the same real distance behind the car at the higher
+  // density rather than just getting shorter.
+  readonly property int sparksPerCar: 70
+  readonly property int dotStep: 12
   property var lastDot: ({})
 
   // Collection bursts, culled by age in tick(). Each delegate runs its own
@@ -528,8 +678,19 @@ Item {
   readonly property int coinsWanted: root.spec.coinsWanted
 
   // Every coin shaves a little off the lap time, but never past the point where
-  // a deflector still reads as a turn rather than a blur.
-  readonly property real tileTime: Math.max(root.spec.tile * 0.62, root.spec.tile - root.score * 10)
+  // a deflector still reads as a turn rather than a blur. The floor moved
+  // from 62% of the base pace to 75% — "too fast" was general, not just late
+  // in a run, so the top end of the ramp needed raising too, not only the
+  // base `tile` values above. Speed and traffic both climbing with score at
+  // once is *also* what made three-plus cars feel unmanageable rather than
+  // hard — the two were compounding right when there was the most to track.
+  // A third car earns 15% back off the clock on top of that, easing exactly
+  // the moment that stacking happens without touching the one- and two-car
+  // pace at all.
+  readonly property real tileTime: {
+    var t = Math.max(root.spec.tile * 0.75, root.spec.tile - root.score * 8)
+    return root.cars.length >= 3 ? t * 1.15 : t
+  }
 
   // Traffic is the whole difficulty ramp now that there is no opponent to
   // supply pressure: every few coins the board earns another car, up to
@@ -561,9 +722,14 @@ Item {
     root.pops = []
     root.misses = []
     root.missCooldown = ({})
+    root.highScoreEntry = null
     root.crashReason = ""
     root.crashCell = -1
-    root.cars = [{ cell: 0, from: root.eS, t: 0 }]
+    root.carLost = false
+    root.coinsSinceCrash = 0
+    root.cars = [{ cell: 0, from: root.eS, t: 0, variant: root.chosenCar, player: true }]
+    root.obstacles = []
+    root.spawnObstacles(root.spec.obstacles)
     root.cursor = Math.floor(root.rows / 2) * root.cols + Math.floor(root.cols / 2)
     for (var i = 0; i < root.coinsWanted; i++) root.spawnCoin()
     root.computeRoute()
@@ -582,9 +748,15 @@ Item {
     return -1
   }
 
+  function isObstacle(cell) {
+    return root.obstacles.indexOf(cell) !== -1
+  }
+
   // Every cell a car will reach if nobody touches anything: walk each car
-  // forward until it repeats a (cell, entry edge) state or leaves the board.
-  // A car's state space is four edges per cell, so that bound terminates.
+  // forward until it repeats a (cell, entry edge) state. The board wraps now,
+  // so this no longer needs an off-board exit to terminate — the (cell, from)
+  // state space is finite regardless, and every car re-enters a state it has
+  // already seen within four times the cell count at the latest.
   function reachableCells() {
     var cells = ({})
     for (var k = 0; k < root.cars.length; k++) {
@@ -597,9 +769,7 @@ Item {
         states[st] = true
         cells[c] = true
         var ex = root.exitFor(root.pieceOf(c), f)
-        var nx = root.neighbor(c, ex)
-        if (nx < 0) break
-        c = nx
+        c = root.neighbor(c, ex)
         f = root.opp(ex)
       }
     }
@@ -616,16 +786,34 @@ Item {
     var free = []
     var i
     for (i = 0; i < root.cellCount; i++)
-      if (!onRoute[i] && root.coinAt(i) < 0 && !root.occupied(i)) free.push(i)
+      if (!onRoute[i] && root.coinAt(i) < 0 && !root.isObstacle(i) && !root.occupied(i)) free.push(i)
     // If the route has been bent until it covers the board, take anywhere legal
     // rather than starving the board of coins.
     if (free.length === 0)
       for (i = 0; i < root.cellCount; i++)
-        if (root.coinAt(i) < 0 && !root.occupied(i)) free.push(i)
+        if (root.coinAt(i) < 0 && !root.isObstacle(i) && !root.occupied(i)) free.push(i)
     if (free.length === 0) return
     var next = root.coins.slice()
     next.push({ cell: free[Math.floor(Math.random() * free.length)], born: Date.now() })
     root.coins = next
+  }
+
+  // Placed once at newGame(), on cells the opening loop doesn't already
+  // reach — same reasoning as coins avoiding the live route, so a fresh
+  // board never opens with a hazard already sitting on the one path there is.
+  function spawnObstacles(count) {
+    var onRoute = root.reachableCells()
+    var free = []
+    var i
+    for (i = 0; i < root.cellCount; i++)
+      if (!onRoute[i] && root.coinAt(i) < 0 && !root.isObstacle(i) && !root.occupied(i)) free.push(i)
+    var next = root.obstacles.slice()
+    for (var n = 0; n < count && free.length > 0; n++) {
+      var pick = Math.floor(Math.random() * free.length)
+      next.push(free[pick])
+      free.splice(pick, 1)
+    }
+    root.obstacles = next
   }
 
   function dropCoin(i) {
@@ -642,7 +830,21 @@ Item {
     root.pops = p
     root.score += 1
     if (root.score > root.best) root.saveBest()
-    if (root.cars.length < root.carCountFor(root.score)) root.addCar()
+
+    if (root.carLost) {
+      // A car down: the score ramp no longer decides this on its own, since
+      // score keeps climbing regardless of a crash — a flat run of coins
+      // earns the next car back instead, same as any other level's ramp,
+      // just measured from the crash rather than from zero.
+      root.coinsSinceCrash += 1
+      if (root.coinsSinceCrash >= root.coinsForLife && root.cars.length < root.maxCars) {
+        root.addCar()
+        root.coinsSinceCrash = 0
+        if (root.cars.length >= root.maxCars) root.carLost = false
+      }
+    } else if (root.cars.length < root.carCountFor(root.score)) {
+      root.addCar()
+    }
   }
 
   function saveBest() {
@@ -663,9 +865,7 @@ Item {
     var c = lead.cell, f = lead.from
     for (var s = 0; s < root.cellCount * 2; s++) {
       var ex = root.exitFor(root.pieceOf(c), f)
-      var nx = root.neighbor(c, ex)
-      if (nx < 0) break
-      c = nx
+      c = root.neighbor(c, ex)
       f = root.opp(ex)
       if (c === lead.cell && f === lead.from) break
       path.push({ cell: c, from: f })
@@ -673,27 +873,60 @@ Item {
     if (path.length < 4) return
     var pick = path[Math.floor(path.length / 2)]
     if (root.occupied(pick.cell)) return
+    var player = !root.hasPlayer()
     var next = root.cars.slice()
-    next.push({ cell: pick.cell, from: pick.from, t: 0 })
+    next.push({
+      cell: pick.cell,
+      from: pick.from,
+      t: 0,
+      variant: player ? root.chosenCar : root.nextTrafficVariant(),
+      player: player
+    })
     root.cars = next
     root.computeRoute()
   }
 
+  // Returns true when the run is over (phase becomes "crashed"). A spare
+  // car turns this into a lost life instead, and the tick must keep going
+  // for the cars that are still on the board.
   function crash(cell, reason, car) {
-    if (root.phase === "crashed") return false
-    var c = car
-    if (!c)
+    if (root.phase === "crashed") return true
+    var idx = -1
+    if (car)
       for (var k = 0; k < root.cars.length; k++)
-        if (root.cars[k].cell === cell) { c = root.cars[k]; break }
+        if (root.cars[k] === car) { idx = k; break }
+    if (idx < 0)
+      for (var k2 = 0; k2 < root.cars.length; k2++)
+        if (root.cars[k2].cell === cell) { idx = k2; break }
+    var c = idx >= 0 ? root.cars[idx] : car
     var p = c ? root.carPointOf(c, 1)
               : { x: (cell % root.cols) + 0.5, y: Math.floor(cell / root.cols) + 0.5 }
     root.crashPoint = { x: p.x, y: p.y }
     root.crashSeed = Math.random() * Math.PI * 2
     root.crashCell = cell
+    root.crashPulse += 1
+
+    if (root.cars.length > 1 && idx >= 0) {
+      // A spare car left: lose the car, not the run. Drop the wake too —
+      // spark entries were keyed by array index, so leaving them in place
+      // recoloured the remaining cars' trails after the splice.
+      var remaining = root.cars.slice()
+      remaining.splice(idx, 1)
+      root.cars = remaining
+      root.sparks = []
+      root.lastDot = ({})
+      root.carLost = true
+      root.coinsSinceCrash = 0
+      root.computeRoute()
+      return false
+    }
+
     root.crashReason = reason
     root.phase = "crashed"
     if (root.score > root.best) root.saveBest()
-    return false
+    if (root.qualifiesForHighScore(root.score, root.spec.key))
+      root.highScoreEntry = { text: "" }
+    return true
   }
 
   // Turning a tile is the only move in the game, and the tile a car is
@@ -701,6 +934,10 @@ Item {
   // Bumped whenever a turn is refused, so the tile that refused it can say so.
   property int refuseSeq: 0
   property int refuseCell: -1
+  // Same pattern as refuseSeq: a player-initiated turn, so tiles can pop
+  // without also firing when newGame() rebuilds the board.
+  property int turnSeq: 0
+  property int turnCell: -1
 
   function rotate(cell) {
     if (root.phase !== "running") return
@@ -720,13 +957,17 @@ Item {
     var next = root.turns.slice()
     next[cell] = next[cell] + 1
     root.turns = next
+    root.turnCell = cell
+    root.turnSeq += 1
+    root.triggerFlash(cell)
     root.computeRoute()
   }
 
   // The route each car will take over the next few tiles. This is the whole
   // reason the game is readable: the two-flip move is invisible without it,
-  // and the tile where a bent route runs out of the world is worth seeing
-  // before the car gets there rather than after.
+  // and the tile a bent route is about to run into is worth seeing before
+  // the car gets there rather than after. The board no longer ends, so the
+  // only way a route can be fatal now is an obstacle sitting in it.
   function computeRoute() {
     var out = []
     var look = root.spec.look
@@ -736,8 +977,9 @@ Item {
       for (var s = 0; s < look; s++) {
         var ex = root.exitFor(root.pieceOf(c), f)
         var nx = root.neighbor(c, ex)
-        out.push({ cell: c, from: f, exit: ex, car: k, step: s, fatal: nx < 0 })
-        if (nx < 0) break
+        var hitsObstacle = root.isObstacle(nx)
+        out.push({ cell: c, from: f, exit: ex, car: k, step: s, fatal: hitsObstacle })
+        if (hitsObstacle) break
         c = nx
         f = root.opp(ex)
       }
@@ -745,12 +987,15 @@ Item {
     root.route = out
   }
 
-  // Hand a car to the next tile. The rails always meet, so the only way this
-  // fails is the car being aimed out of the world.
+  // Hand a car to the next tile. The rails always meet and the board wraps,
+  // so the only way this fails is the next tile being an obstacle.
   function advance(car) {
     var ex = root.exitFor(root.pieceOf(car.cell), car.from)
     var nxt = root.neighbor(car.cell, ex)
-    if (nxt < 0) return root.crash(car.cell, "ran off the board", car)
+    if (root.isObstacle(nxt)) {
+      root.crash(nxt, "hit an obstacle", car)
+      return false
+    }
 
     car.cell = nxt
     car.from = root.opp(ex)
@@ -764,14 +1009,25 @@ Item {
     var i
     var stepped = false
 
-    for (i = 0; i < root.cars.length; i++) {
-      var car = root.cars[i]
+    // Snapshot the roster so a splice mid-loop cannot skip a living car, and
+    // so a non-fatal wreck no longer aborts the rest of the frame.
+    var roster = root.cars.slice()
+    for (i = 0; i < roster.length; i++) {
+      var car = roster[i]
+      if (root.cars.indexOf(car) < 0) continue
       car.t += adv
       var guard = 0
       while (car.t >= 1 && guard++ < 8) {
         car.t -= 1
         stepped = true
-        if (!root.advance(car)) return
+        if (!root.advance(car)) {
+          if (root.phase === "crashed") {
+            root.frame++
+            return
+          }
+          break
+        }
+        if (root.cars.indexOf(car) < 0) break
       }
     }
 
@@ -784,15 +1040,23 @@ Item {
     var now = Date.now()
     var missAdded = false
     var mc = root.missCooldown
-    for (i = 0; i < root.cars.length; i++) {
+    var collided = false
+    for (i = 0; i < root.cars.length && !collided; i++) {
       for (var j = i + 1; j < root.cars.length; j++) {
         if (root.cars[i].cell !== root.cars[j].cell) continue
         var a = root.carState(i, 1)
         var b = root.carState(j, 1)
         var dx = a.x - b.x, dy = a.y - b.y
         var d = Math.sqrt(dx * dx + dy * dy)
-        if (d < 0.30)
-          return root.crash(root.cars[i].cell, "two cars, one tile", root.cars[i])
+        if (d < 0.30) {
+          root.crash(root.cars[i].cell, "two cars, one tile", root.cars[i])
+          collided = true
+          if (root.phase === "crashed") {
+            root.frame++
+            return
+          }
+          break
+        }
         if (d < 0.62) {
           var pk = i + ":" + j
           if (now - (mc[pk] || 0) > 900) {
@@ -817,7 +1081,7 @@ Item {
       if (root.lastDot[i] === key) continue
       root.lastDot[i] = key
       if (!added) { sp = root.sparks.slice(); added = true }
-      sp.push({ x: qx, y: qy, car: i })
+      sp.push({ x: qx, y: qy, hue: root.variantFor(i) })
     }
     if (added) {
       var cap = Math.max(1, root.cars.length) * root.sparksPerCar
@@ -874,7 +1138,12 @@ Item {
   }
 
   FrameAnimation {
-    running: root.opened && root.phase === "running"
+    // `helpOpen` doesn't touch `phase` (closing it should resume exactly
+    // where play left off), but leaving the tick running underneath it
+    // meant the whole board — cars, trail, coin timers — kept moving behind
+    // a translucent scrim while you were trying to read: distracting at
+    // best, and the fuse timers no reader agreed to keep burning.
+    running: root.opened && root.phase === "running" && !root.helpOpen && !root.menuOpen
     // A frame lost to a stall should not teleport a car through three tiles.
     onTriggered: root.tick(Math.min(0.05, frameTime))
   }
@@ -888,22 +1157,78 @@ Item {
   // into a plugin root the way it injects `shell`, and declaring it here as
   // readonly makes the assignment throw, which takes the whole panel down with
   // it. The failure is silent apart from one TypeError in the shell log.
-  readonly property string pluginDir: root.home + "/.config/omarchy/plugins/" + root.selfId
   readonly property string omaRoot: Quickshell.env("OMARCHY_PATH") || "/usr/share/omarchy"
   readonly property string omarchyIcon: "file://" + root.omaRoot + "/icon.png"
 
-  readonly property string home: Quickshell.env("HOME")
-  readonly property string stateDir: root.home + "/.local/state/omacircuit"
-  readonly property string statePath: root.stateDir + "/state.json"
+  // Scores live under XDG state, never under ~/.config. HOME must be a real
+  // absolute path: an empty HOME would otherwise mkdir -p /.local/state/...
+  readonly property string home: Quickshell.env("HOME") || ""
+  readonly property string stateDir: (root.home.charAt(0) === "/" && root.home.indexOf("..") === -1)
+    ? root.home + "/.local/state/omacircuit" : ""
+  readonly property string statePath: root.stateDir !== "" ? root.stateDir + "/state.json" : ""
   property bool stateLoaded: false
+
+  function clampInt(n, lo, hi, fallback) {
+    n = Number(n)
+    if (!isFinite(n)) return fallback
+    n = Math.floor(n)
+    return Math.max(lo, Math.min(hi, n))
+  }
+
+  // High-score names are typed as printable ASCII, 8 chars. Re-apply the
+  // same rule when reading state.json so a hand-edited file cannot inject
+  // control characters into the Text items that display them.
+  function sanitizeName(s) {
+    s = String(s || "")
+    var out = ""
+    for (var i = 0; i < s.length && out.length < 8; i++) {
+      var ch = s.charAt(i)
+      if (ch >= " " && ch <= "~") out += ch
+    }
+    return out
+  }
 
   function applyState(raw) {
     var wantLevel = root.level
     try {
-      var s = JSON.parse(raw)
-      if (s && s.bests) root.bests = s.bests
-      else if (s && typeof s.best === "number") root.bests = { circuit: s.best }  // v1
-      if (s && typeof s.level === "number") wantLevel = s.level
+      var s = JSON.parse(String(raw || ""))
+      if (s && typeof s === "object") {
+        var b = {}
+        if (s.bests && typeof s.bests === "object") {
+          for (var i = 0; i < root.levels.length; i++) {
+            var key = root.levels[i].key
+            if (typeof s.bests[key] === "number")
+              b[key] = root.clampInt(s.bests[key], 0, 99999, 0)
+          }
+        } else if (typeof s.best === "number") {
+          b.circuit = root.clampInt(s.best, 0, 99999, 0)  // v1
+        }
+        root.bests = b
+
+        var hs = {}
+        if (s.highScores && typeof s.highScores === "object") {
+          for (var j = 0; j < root.levels.length; j++) {
+            var hk = root.levels[j].key
+            var list = s.highScores[hk]
+            if (!Array.isArray(list)) continue
+            var clean = []
+            for (var n = 0; n < list.length && clean.length < 5; n++) {
+              var row = list[n]
+              if (!row || typeof row !== "object") continue
+              var name = root.sanitizeName(row.name).trim()
+              var score = root.clampInt(row.score, 1, 99999, 0)
+              if (name !== "" && score > 0) clean.push({ name: name, score: score })
+            }
+            clean.sort(function(a, b) { return b.score - a.score })
+            if (clean.length > 0) hs[hk] = clean
+          }
+        }
+        root.highScores = hs
+
+        if (typeof s.level === "number") wantLevel = s.level
+        if (typeof s.chosenCar === "number")
+          root.chosenCar = root.clampInt(s.chosenCar, 0, 2, 0)
+      }
     } catch (e) {
     }
     root.stateLoaded = true
@@ -912,8 +1237,14 @@ Item {
   }
 
   function writeState() {
-    if (!root.stateLoaded) return
-    stateFile.setText(JSON.stringify({ version: 2, bests: root.bests, level: root.level }))
+    if (!root.stateLoaded || root.statePath === "") return
+    stateFile.setText(JSON.stringify({
+      version: 3,
+      bests: root.bests,
+      highScores: root.highScores,
+      level: root.level,
+      chosenCar: root.chosenCar
+    }))
   }
 
   FileView {
@@ -927,13 +1258,18 @@ Item {
 
   Process {
     id: mkStateDir
-    command: ["mkdir", "-p", root.stateDir]
+    command: ["mkdir", "-p", "--", root.stateDir]
     onExited: stateFile.reload()
   }
 
   Component.onCompleted: {
-    mkStateDir.running = true
+    if (root.stateDir !== "") mkStateDir.running = true
+    else root.applyState("")
     root.newGame()
+    // Deferred a tick so this is a real false->true transition the
+    // overlay's onVisibleChanged can react to, rather than folded into the
+    // same construction pass as its own initial (already-false) value.
+    Qt.callLater(function() { root.menuOpen = true })
   }
 
   // ------------------------------------------------------------- open/close
@@ -960,7 +1296,56 @@ Item {
     else root.open("{}")
   }
 
-  function handleKey(key) {
+  function handleKey(event) {
+    var key = event.key
+
+    // The start menu owns the keyboard outright while it's up too, for the
+    // same reason name entry does: q/space/arrows all mean something else
+    // everywhere else in this function.
+    if (root.menuOpen) {
+      if (key === Qt.Key_Escape || key === Qt.Key_Q) { root.close(); return true }
+      if (key === Qt.Key_Left || key === Qt.Key_A || key === Qt.Key_H) {
+        root.setChosenCar((root.chosenCar + 2) % 3)
+        return true
+      }
+      if (key === Qt.Key_Right || key === Qt.Key_D || key === Qt.Key_L) {
+        root.setChosenCar((root.chosenCar + 1) % 3)
+        return true
+      }
+      if (key === Qt.Key_Space || key === Qt.Key_Return || key === Qt.Key_Enter) {
+        root.menuOpen = false
+        return true
+      }
+      return true
+    }
+
+    // Name entry owns the keyboard outright while it's up, and has to be
+    // checked before anything else — including Escape/Q, below, which
+    // normally closes the panel. Letters like Q, R, P, H, J, K, L double as
+    // shortcuts everywhere else in this function, and a name is allowed to
+    // contain any of them, so this has to intercept before those bindings
+    // ever see the keystroke.
+    if (root.highScoreEntry) {
+      var e = root.highScoreEntry
+      if (key === Qt.Key_Escape) { root.highScoreEntry = null; return true }
+      if (key === Qt.Key_Backspace) {
+        root.highScoreEntry = { text: e.text.slice(0, -1) }
+        return true
+      }
+      if (key === Qt.Key_Return || key === Qt.Key_Enter) {
+        if (e.text.trim().length > 0) root.commitHighScore()
+        return true
+      }
+      // Anything else that produced actual text — this is what lets Space
+      // type a space rather than doing its usual job, and is also why a
+      // bare modifier key or an arrow (which produce no text) falls through
+      // to nothing instead of inserting a stray character.
+      var ch = event.text
+      if (ch && ch.length === 1 && ch >= " " && ch <= "~" && e.text.length < 8)
+        root.highScoreEntry = { text: root.sanitizeName(e.text + ch) }
+      return true
+    }
+
     if (key === Qt.Key_Escape || key === Qt.Key_Q) { root.close(); return true }
     if (key === Qt.Key_R) { root.newGame(); return true }
     if (key === Qt.Key_Question || key === Qt.Key_Slash) {
@@ -970,6 +1355,7 @@ Item {
     if (key === Qt.Key_1) { root.setLevel(0); return true }
     if (key === Qt.Key_2) { root.setLevel(1); return true }
     if (key === Qt.Key_3) { root.setLevel(2); return true }
+    if (key === Qt.Key_4) { root.setLevel(3); return true }
     if (key === Qt.Key_P) {
       if (root.phase !== "crashed")
         root.phase = (root.phase === "paused") ? "running" : "paused"
@@ -1022,7 +1408,7 @@ Item {
       focus: true
 
       Keys.onPressed: function(event) {
-        if (root.handleKey(event.key)) event.accepted = true
+        if (root.handleKey(event)) event.accepted = true
       }
 
       // ----------------------------------------------------------- header
@@ -1045,6 +1431,19 @@ Item {
             height: Math.round(Style.font.title * 1.1)
             color: root.levelColor
           }
+          // A terminal prompt rather than a plain wordmark: `$` in the
+          // level's own color, the name, then a block cursor that blinks
+          // on its own clock. Small touch, but it is what stops a static
+          // heading from reading like a label and starts it reading like
+          // something waiting on you.
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "$ "
+            color: root.levelColor
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.title
+            font.bold: true
+          }
           Text {
             anchors.verticalCenter: parent.verticalCenter
             text: "omacircuit"
@@ -1052,6 +1451,71 @@ Item {
             font.family: root.fontFamily
             font.pixelSize: Style.font.title
             font.bold: true
+          }
+          Rectangle {
+            id: titleCursor
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.round(Style.font.title * 0.55)
+            height: Math.round(Style.font.title * 0.95)
+            color: root.foreground
+
+            SequentialAnimation on opacity {
+              loops: Animation.Infinite
+              NumberAnimation { to: 0; duration: 20; easing.type: Easing.OutQuad }
+              PauseAnimation { duration: 480 }
+              NumberAnimation { to: 1; duration: 20 }
+              PauseAnimation { duration: 480 }
+            }
+          }
+
+          Item { width: Style.spacing.lg; height: 1 }
+
+          // The live count, "above" the board rather than only under it —
+          // the same shared Coin component the readout under the board and
+          // the wrecked-card header use, just smaller.
+          Coin {
+            anchors.verticalCenter: parent.verticalCenter
+            cell: Math.round(Style.font.title * 1.1)
+            hud: true
+          }
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.score
+            color: root.coinColor
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.subtitle
+            font.bold: true
+          }
+
+          Item { width: Style.spacing.lg; height: 1 }
+
+          // A life per car this level can field, so "you have three lives"
+          // is something you can see rather than only discover by surviving
+          // a wreck — filled in that car's own hue while it's alive, hollow
+          // once it's gone. The next hollow dot in line fills in with the
+          // coin color as coinsSinceCrash climbs toward earning it back.
+          Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Style.spacing.xxs
+            visible: root.maxCars > 1
+
+            Repeater {
+              model: root.maxCars
+
+              Rectangle {
+                readonly property bool alive: index < root.cars.length
+                readonly property bool recovering: !alive && root.carLost && index === root.cars.length
+                width: Math.round(Style.font.subtitle * 0.55)
+                height: width
+                radius: width / 2
+                color: alive ? root.carColor(index)
+                       : recovering ? root.fade(root.coinColor, 0.25 + 0.65 * Math.min(1, root.coinsSinceCrash / root.coinsForLife))
+                       : "transparent"
+                border.width: Math.max(1, Style.space(2))
+                border.color: alive ? root.core(root.carColor(index))
+                                    : root.fade(root.foreground, 0.35)
+              }
+            }
           }
         }
 
@@ -1095,10 +1559,60 @@ Item {
         }
       }
 
+      // ------------------------------------------------------------ leaders
+      //
+      // The wrecked card already showed this level's top five, but only
+      // after a wreck — asked to have it up during play too, not just as a
+      // post-mortem. Kept to three entries and one line rather than
+      // reproducing the card's full five-row list: this sits above the
+      // board permanently, so it has to stay out of the way of the thing
+      // it's next to.
+      Row {
+        id: liveBoard
+        anchors.top: header.bottom
+        anchors.topMargin: Style.spacing.xs
+        anchors.horizontalCenter: parent.horizontalCenter
+        visible: (root.highScores[root.spec.key] || []).length > 0
+        spacing: Style.spacing.lg
+
+        Repeater {
+          model: (root.highScores[root.spec.key] || []).slice(0, 3)
+
+          Row {
+            required property var modelData
+            required property int index
+            spacing: Style.spacing.xxs
+
+            Medal {
+              rank: index + 1
+              width: Style.space(26)
+              height: width
+              anchors.verticalCenter: parent.verticalCenter
+            }
+            Text {
+              text: modelData.name || "—"
+              textFormat: Text.PlainText
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              anchors.verticalCenter: parent.verticalCenter
+            }
+            Text {
+              text: modelData.score
+              color: root.coinColor
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              anchors.verticalCenter: parent.verticalCenter
+            }
+          }
+        }
+      }
+
       // ------------------------------------------------------------ board
       Item {
         id: boardSlot
-        anchors.top: header.bottom
+        anchors.top: liveBoard.visible ? liveBoard.bottom : header.bottom
         anchors.topMargin: Style.spacing.panelGap
         anchors.bottom: statusLine.top
         anchors.bottomMargin: Style.spacing.panelGap
@@ -1130,7 +1644,7 @@ Item {
           border.width: 1
           border.color: root.fade(root.gridNeon, 0.28)
 
-          // Four corner brackets in the level's colour. The frame was a plain
+          // Four corner brackets in the level's color. The frame was a plain
           // rounded rectangle; the brackets are what make it read as a rig the
           // board is mounted in rather than as a border around it.
           Repeater {
@@ -1174,12 +1688,24 @@ Item {
             // costs one transform and is most of what sells the impact.
             transform: Translate { id: boardShake }
 
+            // Set for a moment on a wreck that only cost a car — phase never
+            // leaves "running" then, so the debris burst below needs its own
+            // trigger instead of riding the phase change the game-over one uses.
+            property bool wreckFlash: false
+
             Connections {
               target: root
-              function onPhaseChanged() {
-                if (root.phase === "crashed") { shakeAnim.restart(); flashAnim.restart() }
+              function onCrashPulseChanged() {
+                shakeAnim.restart()
+                flashAnim.restart()
+                if (root.phase !== "crashed") {
+                  boardArea.wreckFlash = true
+                  wreckFlashTimer.restart()
+                }
               }
             }
+
+            Timer { id: wreckFlashTimer; interval: 650; onTriggered: boardArea.wreckFlash = false }
 
             SequentialAnimation {
               id: shakeAnim
@@ -1207,7 +1733,7 @@ Item {
                 readonly property bool edge: gx === 0 || gy === 0
                                           || gx === root.cols || gy === root.rows
                 readonly property real base: edge ? 0.55 : 0.28
-                // A travelling wave rather than per-dot random twinkling —
+                // A traveling wave rather than per-dot random twinkling —
                 // "dot matrix" implies these are particles, not a drawn grid,
                 // and a field of Rectangles that never moves reads as drawn
                 // no matter how small the dots are. Sampling the shared
@@ -1342,8 +1868,15 @@ Item {
 
 
                 // A click changes the shape rather than the angle, so the
-                // feedback is a pop rather than a turn.
-                onPieceChanged: { pop.restart(); root.triggerFlash(index); shock.restart() }
+                // feedback is a pop rather than a turn. Driven off turnSeq
+                // rather than onPieceChanged, which also fired for every
+                // tile newGame() rewrote.
+                Connections {
+                  target: root
+                  function onTurnSeqChanged() {
+                    if (root.turnCell === index) { pop.restart(); shock.restart() }
+                  }
+                }
                 SequentialAnimation {
                   id: pop
                   NumberAnimation { target: rails; property: "scale"; to: 0.84; duration: 60; easing.type: Easing.OutQuad }
@@ -1351,7 +1884,7 @@ Item {
                 }
 
                 // The literal "outbound" read: a ring launched from the
-                // tile's own centre outward past its edges, in the rail's
+                // tile's own center outward past its edges, in the rail's
                 // hue, so a turn announces itself beyond the one tile it
                 // changed rather than only inside it.
                 Rectangle {
@@ -1449,8 +1982,15 @@ Item {
                 for (var idx = 0; idx < root.cellCount; idx++) {
                   if (root.isLocked(idx)) continue
                   var flash = idx === root.flashCell ? root.flashAmount : 0
-                  ctx.fillStyle = root.core(root.mix(root.railIdle, root.core(root.railNeon), flash))
-                  var paths = root.pathsFor(root.pieceOf(idx))
+                  var piece = root.pieceOf(idx)
+                  // A tile that has been turned stays green at rest instead
+                  // of fading back to the idle blue every other crossing
+                  // uses — the shape of the bend was already there to read,
+                  // but it took parsing dot geometry at a glance to see it;
+                  // the color now says "this one's been turned" for free.
+                  var base = piece === 0 ? root.railIdle : root.railNeon
+                  ctx.fillStyle = root.core(root.mix(base, root.core(root.railNeon), flash))
+                  var paths = root.pathsFor(piece)
                   var tx = (idx % root.cols) * cell
                   var ty = Math.floor(idx / root.cols) * cell
                   for (var p = 0; p < 2; p++) {
@@ -1478,7 +2018,11 @@ Item {
                 readonly property var sp: root.sparks[index]
                 // Oldest at the front of the array, so position in it is age.
                 readonly property real life: (index + 1) / Math.max(1, root.sparks.length)
-                readonly property color tint: root.carHues[(sp ? sp.car : 0) % root.carHues.length]
+                readonly property color tint: {
+                  var h = sp && typeof sp.hue === "number" ? sp.hue
+                        : (sp && typeof sp.car === "number" ? root.variantFor(sp.car) : 0)
+                  return root.carHues[h % root.carHues.length]
+                }
 
                 // A glitter pass on top of the age-based fade, not instead of
                 // it: age still says how old the dot is, this just says
@@ -1504,7 +2048,7 @@ Item {
                 // Uniform and tiny. A dot matrix reads as a matrix because the
                 // dots are all the same size; age is carried by brightness alone,
                 // and dropping the per-dot halo is what pays for having this many.
-                width: Math.max(1, Math.round(boardArea.cell * 0.075))
+                width: Math.max(1, Math.round(boardArea.cell * 0.055))
                 height: width
                 radius: width / 2
                 x: (sp ? sp.x : 0) * boardArea.cell - width / 2
@@ -1528,7 +2072,7 @@ Item {
                 readonly property int cell: boardArea.cell
                 readonly property color tint: hop && hop.fatal
                   ? root.dangerColor
-                  : root.carHues[(hop ? hop.car : 0) % root.carHues.length]
+                  : root.carColor(hop ? hop.car : 0)
 
                 visible: !!hop
                 x: hop ? (hop.cell % root.cols) * cell : 0
@@ -1570,7 +2114,7 @@ Item {
                 // Sampled across the *whole* look-ahead via `dist` rather than
                 // per-hop, so the taper is one smooth curve across every hop
                 // instead of resetting at each tile boundary.
-                readonly property int dots: 10
+                readonly property int dots: 16
                 Repeater {
                   model: hopItem.dots
 
@@ -1599,7 +2143,7 @@ Item {
 
                     Rectangle {
                       anchors.centerIn: parent
-                      width: hopItem.cell * 0.17 * routeDot.sz
+                      width: hopItem.cell * 0.12 * routeDot.sz
                       height: width
                       radius: width / 2
                       color: hopItem.tint
@@ -1607,7 +2151,7 @@ Item {
                     }
                     Rectangle {
                       anchors.centerIn: parent
-                      width: hopItem.cell * 0.075 * routeDot.sz
+                      width: hopItem.cell * 0.052 * routeDot.sz
                       height: width
                       radius: width / 2
                       color: root.core(hopItem.tint)
@@ -1616,7 +2160,9 @@ Item {
                   }
                 }
 
-                // Where the route leaves the board, say so loudly.
+                // Where the route is about to drive into an obstacle, say so
+                // loudly — the last safe tile before it, not the obstacle
+                // itself, since that's the one flip that still avoids it.
                 Rectangle {
                   id: exitMark
                   anchors.centerIn: parent
@@ -1633,6 +2179,110 @@ Item {
                     NumberAnimation { to: 0.25; duration: 420 }
                     NumberAnimation { to: 1.0;  duration: 420 }
                   }
+                }
+              }
+            }
+
+            // ---- obstacles. Fixed hazards rather than another timed
+            // pickup, so they read as terrain: a diamond rather than a
+            // circle (nothing else on the board is a diamond), dangerColor
+            // rather than any playing-piece hue, and a slow pulse rather
+            // than the sharper flicker a live threat gets — this is
+            // something to route around, not something reacting to you.
+            Repeater {
+              model: root.obstacles.length
+
+              Item {
+                id: obstacleSlot
+                readonly property int cell: boardArea.cell
+                readonly property int obCell: root.obstacles[index]
+
+                x: (obCell % root.cols) * cell
+                y: Math.floor(obCell / root.cols) * cell
+                width: cell
+                height: cell
+
+                // A ground shadow, offset rather than centered, is the same
+                // "this sits above the board" cue the cars' own contact
+                // shadow already gives them — without it the obstacle read
+                // as printed on the board rather than standing on it.
+                Rectangle {
+                  x: parent.width * 0.5 - width / 2 + obstacleSlot.cell * 0.03
+                  y: parent.height * 0.5 - height / 2 + obstacleSlot.cell * 0.05
+                  width: obstacleSlot.cell * 0.46
+                  height: width * 0.55
+                  radius: width / 2
+                  color: root.fade("#000000", root.darkSurface ? 0.35 : 0.18)
+                }
+
+                Rectangle {
+                  id: obstacleGlow
+                  anchors.centerIn: parent
+                  width: obstacleSlot.cell * 0.62
+                  height: width
+                  rotation: 45
+                  color: root.fade(root.dangerColor, 0.16 * root.glow)
+                  SequentialAnimation on opacity {
+                    loops: Animation.Infinite
+                    NumberAnimation { to: 0.5; duration: 900; easing.type: Easing.InOutSine }
+                    NumberAnimation { to: 1.0; duration: 900; easing.type: Easing.InOutSine }
+                  }
+                }
+
+                // A slow beacon ping rather than the sharper flicker a live
+                // threat gets — this is marked terrain, announcing itself
+                // the same way the turn-shockwave ring does elsewhere on
+                // this board, just looping instead of one-shot.
+                Rectangle {
+                  id: hazardBeacon
+                  anchors.centerIn: parent
+                  width: obstacleSlot.cell * 0.42
+                  height: width
+                  radius: width / 2
+                  color: "transparent"
+                  border.width: Math.max(1, obstacleSlot.cell * 0.03)
+                  border.color: root.dangerColor
+                  opacity: 0.7
+
+                  SequentialAnimation {
+                    running: true
+                    loops: Animation.Infinite
+                    ScriptAction { script: { hazardBeacon.width = obstacleSlot.cell * 0.42; hazardBeacon.opacity = 0.7 } }
+                    ParallelAnimation {
+                      NumberAnimation { target: hazardBeacon; property: "width"; to: obstacleSlot.cell * 0.80; duration: 1400; easing.type: Easing.OutQuad }
+                      NumberAnimation { target: hazardBeacon; property: "opacity"; to: 0; duration: 1400 }
+                    }
+                    PauseAnimation { duration: 300 }
+                  }
+                }
+
+                // The hazard badge itself, one layer deeper than before: an
+                // outer ring, a darkened mid fill, a bright core — a target
+                // rather than a flat tinted diamond.
+                Rectangle {
+                  anchors.centerIn: parent
+                  width: obstacleSlot.cell * 0.44
+                  height: width
+                  rotation: 45
+                  color: "transparent"
+                  border.width: Math.max(1, obstacleSlot.cell * 0.05)
+                  border.color: root.dangerColor
+                }
+                Rectangle {
+                  anchors.centerIn: parent
+                  width: obstacleSlot.cell * 0.34
+                  height: width
+                  rotation: 45
+                  color: root.mix(root.boardBg, root.dangerColor, 0.40)
+                  border.width: Math.max(1, obstacleSlot.cell * 0.03)
+                  border.color: root.fade(root.dangerColor, 0.6)
+                }
+                Rectangle {
+                  anchors.centerIn: parent
+                  width: obstacleSlot.cell * 0.14
+                  height: width
+                  rotation: 45
+                  color: root.core(root.dangerColor)
                 }
               }
             }
@@ -1818,11 +2468,13 @@ Item {
               }
             }
 
-            // ---- wreck debris. Loaded only on a crash, so the fragments'
-            // one-shot animations start exactly when the wreck happens.
+            // ---- wreck debris. Loaded on a crash, so the fragments'
+            // one-shot animations start exactly when the wreck happens; a
+            // wreck that only cost a car keeps it around just long enough to
+            // play out via wreckFlash, since phase never becomes "crashed".
             Loader {
               anchors.fill: parent
-              active: root.phase === "crashed"
+              active: root.phase === "crashed" || boardArea.wreckFlash
               sourceComponent: Repeater {
                 model: 7
 
@@ -1866,8 +2518,9 @@ Item {
                 Racer {
                   anchors.centerIn: parent
                   cell: boardArea.cell
-                  variant: index
-                  tint: root.carHues[index % root.carHues.length]
+                  variant: root.variantFor(index)
+                  tint: root.carColor(index)
+                  isPlayer: !!(root.cars[index] && root.cars[index].player)
                   wrecked: root.phase === "crashed"
                 }
               }
@@ -1901,9 +2554,12 @@ Item {
             id: overlay
             anchors.fill: parent
             radius: parent.radius
-            visible: root.phase !== "running" || root.helpOpen
+            visible: root.phase !== "running" || root.helpOpen || root.menuOpen
             opacity: 0
-            color: Qt.rgba(root.background.r, root.background.g, root.background.b, 0.86)
+            color: {
+              var c = root.toColor(root.background)
+              return Qt.rgba(c.r, c.g, c.b, 0.86)
+            }
 
             onVisibleChanged: {
               if (visible) overlayIn.restart()
@@ -1918,21 +2574,32 @@ Item {
             // A card rather than free-floating text. The scrim on its own left the
             // words lying on the board with nothing under them, and the three states
             // this thing has — paused, wrecked, explaining itself — were told apart
-            // only by the colour of one line of type.
+            // only by the color of one line of type.
             Rectangle {
               id: card
 
-              readonly property color accentHue: root.helpOpen ? root.coinColor
+              readonly property color accentHue: root.menuOpen ? root.carHues[root.chosenCar]
+                : root.highScoreEntry ? root.coinColor
+                : root.helpOpen ? root.coinColor
                 : root.phase === "crashed" ? root.dangerColor
                 : root.levelColor
 
               anchors.centerIn: parent
               width: Math.min(parent.width - Style.spacing.lg * 2, Style.space(370))
-              height: cardBody.height + Style.spacing.xxl * 2
+              // Capped to what the board frame actually has, not just to the
+              // content's own natural height — on a small board (Cruise's 5
+              // rows especially) the help card's full text plus its two-
+              // column key grid can need more room than the frame has, and
+              // nothing here clips, so an uncapped card spilled straight
+              // over the readout row parked underneath. Scrolls instead
+              // (see the Flickable below) whenever it doesn't fit.
+              height: Math.min(cardBody.height + Style.spacing.xxl * 2,
+                                parent.height - Style.spacing.lg * 2)
               radius: Math.max(root.cornerRadius, Style.space(4))
               color: root.mix(root.background, root.darkSurface ? "#000000" : "#ffffff", 0.30)
               border.width: Math.max(1, Style.space(1))
               border.color: root.fade(card.accentHue, 0.70)
+              clip: true
 
               Rectangle {
                 anchors.fill: parent
@@ -1944,25 +2611,51 @@ Item {
                 z: -1
               }
 
+              // Plain `anchors.centerIn` sized `cardBody` to fit before; now
+              // that `card` itself can be shorter than `cardBody`'s natural
+              // height, this scrolls instead of centering the overflow off
+              // both edges. `interactive` only turns on when it's actually
+              // needed, so this behaves exactly as before whenever the
+              // content already fits.
+              Flickable {
+                id: cardScroll
+                anchors.fill: parent
+                anchors.margins: Style.spacing.xxl
+                contentWidth: width
+                contentHeight: cardBody.height
+                interactive: contentHeight > height
+                boundsBehavior: Flickable.StopAtBounds
+                clip: true
+
               Column {
                 id: cardBody
-                anchors.centerIn: parent
-                width: parent.width - Style.spacing.xxl * 2
+                width: parent.width
                 spacing: Style.spacing.md
+
+                // Everything below is the paused/wrecked/help/high-score card
+                // this always was; the start menu (see the sibling Column
+                // right after it closes) is its own separate screen, never
+                // shown at the same time, so nothing here needed its own
+                // menuOpen guard beyond this one wrapper.
+                Column {
+                width: parent.width
+                spacing: Style.spacing.md
+                visible: !root.menuOpen
 
                 // The state says itself in the thing the state is about: a wreck shows
                 // a wrecked car, and the help card shows the coin the whole game is a
                 // long argument about.
                 Item {
                   anchors.horizontalCenter: parent.horizontalCenter
-                  visible: !root.helpOpen && root.phase === "crashed"
+                  visible: !root.helpOpen && root.phase === "crashed" && !root.highScoreEntry
                   width: Style.space(34)
                   height: width
 
                   Racer {
                     anchors.centerIn: parent
                     cell: parent.width
-                    variant: 0
+                    variant: root.chosenCar
+                    isPlayer: true
                     wrecked: true
                     idle: true
                     rotation: 26
@@ -1970,7 +2663,7 @@ Item {
                 }
                 Coin {
                   anchors.horizontalCenter: parent.horizontalCenter
-                  visible: root.helpOpen
+                  visible: root.helpOpen || !!root.highScoreEntry
                   cell: Style.space(30)
                   hud: true
                 }
@@ -1979,9 +2672,11 @@ Item {
                   width: parent.width
                   horizontalAlignment: Text.AlignHCenter
                   text: root.helpOpen ? "how it works"
+                      : root.highScoreEntry ? "new high score!"
                       : root.phase !== "crashed" ? "paused"
                       : "wrecked"
-                  color: root.helpOpen || root.phase !== "crashed" ? root.foreground
+                  color: root.highScoreEntry ? root.coinColor
+                       : root.helpOpen || root.phase !== "crashed" ? root.foreground
                        : root.dangerColor
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.heading
@@ -1989,18 +2684,129 @@ Item {
                 }
                 Text {
                   width: parent.width
-                  horizontalAlignment: Text.AlignHCenter
+                  // Help is a reference, not a poster: centered wrapping made
+                  // every line a different width and buried the wreck rule in
+                  // the middle of a paragraph.
+                  horizontalAlignment: root.helpOpen ? Text.AlignLeft : Text.AlignHCenter
                   wrapMode: Text.WordWrap
-                  // The key list came out of this paragraph and went onto the keys
-                  // below it, where it can be read at a glance instead of parsed.
                   text: root.helpOpen
-                    ? "The cars never stop. The cursor moves, and turning the tile under it cycles that tile: crossing, one diagonal, the other. Clicking does the same.\n\nThe coloured trail is where a car is about to go. Bend it onto the coins before their dial runs out. A flashing red ring means the trail runs off the board.\n\nThree ways to lose: turn the tile a car is standing on, let a car run off the board, or put two cars in the same place. Cruise never adds a second car; Circuit and Grand Prix add one every so many coins, so the board gets busier the longer you keep it alive."
+                    ? "The cars never stop, and the board wraps \u2014 drive off one edge and you come back on the other, still mid-lap. Move the cursor and turn the tile under it: crossing, one diagonal, the other. Clicking does the same.\n\nThe colored trail is where a car is about to go. Bend it onto the coins before their dial runs out. A flashing red ring means that trail hits an obstacle. Gold tiles are welded shut; they flinch instead of wrecking you.\n\nThree ways to wreck a car: turn the tile it is standing on, drive it into an obstacle, or put two cars in the same place. A spare car costs only that life. The run ends when the last one goes. Cruise never fields a second car or an obstacle."
+                    : root.highScoreEntry
+                      ? root.score + " coins on " + root.spec.name + " \u2014 enter your name"
                     : root.phase === "crashed"
                       ? root.crashReason + "  \u00b7  " + root.score + " coins on " + root.spec.name
                       : "back to it"
                   color: root.dim
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.body
+                }
+
+                // A plain text field rather than arcade letter-cycling —
+                // labrat asked for normal typing, so this reads `event.text`
+                // in handleKey() directly rather than reimplementing a
+                // key-to-character map. The blink is a fixed 500ms toggle
+                // rather than something bound to a shared clock, since only
+                // one of these can ever be on screen at once.
+                Rectangle {
+                  id: nameField
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  visible: !!root.highScoreEntry
+                  width: Style.space(160)
+                  height: Style.space(40)
+                  radius: Style.space(4)
+                  color: root.fade(root.coinColor, 0.12)
+                  border.width: Math.max(1, Style.space(2))
+                  border.color: root.coinColor
+
+                  property bool blink: true
+                  Timer {
+                    interval: 500
+                    running: nameField.visible
+                    repeat: true
+                    onTriggered: nameField.blink = !nameField.blink
+                  }
+
+                  Text {
+                    anchors.centerIn: parent
+                    text: (root.highScoreEntry ? root.highScoreEntry.text : "")
+                          + (nameField.blink ? "_" : " ")
+                    textFormat: Text.PlainText
+                    color: root.coinColor
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.heading
+                    font.bold: true
+                  }
+                }
+
+                // The board for whichever level you just played, so the
+                // number you were chasing stays on screen after you miss it \u2014
+                // and so a run that didn't qualify still shows what would
+                // have. Only while not mid-entry: the letter slots above are
+                // already the answer to "did I make it."
+                Column {
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  visible: !root.helpOpen && root.phase === "crashed" && !root.highScoreEntry
+                           && (root.highScores[root.spec.key] || []).length > 0
+                  spacing: Style.spacing.xxs
+
+                  Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "top scores \u00b7 " + root.spec.name
+                    color: root.fade(root.foreground, 0.55)
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    font.bold: true
+                  }
+                  Repeater {
+                    model: root.highScores[root.spec.key] || []
+                    Row {
+                      required property var modelData
+                      required property int index
+                      spacing: Style.spacing.sm
+
+                      Item {
+                        width: Style.space(44)
+                        height: Style.space(44)
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Medal {
+                          visible: index < 3
+                          rank: index + 1
+                          width: Style.space(44)
+                          height: width
+                          anchors.centerIn: parent
+                        }
+                        Text {
+                          visible: index >= 3
+                          anchors.centerIn: parent
+                          text: (index + 1) + "."
+                          color: root.fade(root.foreground, 0.45)
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.caption
+                          font.bold: true
+                        }
+                      }
+                      Text {
+                        width: Style.space(46)
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: modelData.name
+                        textFormat: Text.PlainText
+                        color: root.dim
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.caption
+                        font.bold: true
+                      }
+                      Text {
+                        width: Style.space(36)
+                        anchors.verticalCenter: parent.verticalCenter
+                        horizontalAlignment: Text.AlignRight
+                        text: modelData.score
+                        color: root.coinColor
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.caption
+                      }
+                    }
+                  }
                 }
 
                 Item { width: 1; height: Style.spacing.xs }
@@ -2017,19 +2823,28 @@ Item {
 
                   Hint { keys: ["\u2190", "\u2191", "\u2193", "\u2192"]; label: "move" }
                   Hint { keys: ["space"]; label: "turn the tile" }
-                  Hint { keys: ["1", "2", "3"]; label: "level" }
+                  Hint { keys: ["1", "2", "3", "4"]; label: "level" }
                   Hint { keys: ["p"]; label: "pause" }
                   Hint { keys: ["r"]; label: "new board" }
                   Hint { keys: ["?"]; label: "help" }
-                  Hint { keys: ["q"]; label: "close" }
+                  Hint { keys: ["q", "esc"]; label: "close" }
                 }
                 Row {
                   anchors.horizontalCenter: parent.horizontalCenter
-                  visible: !root.helpOpen && root.phase === "crashed"
+                  visible: !!root.highScoreEntry
+                  spacing: Style.spacing.lg
+
+                  Hint { keys: ["enter"]; label: "confirm" }
+                  Hint { keys: ["\u232b"]; label: "delete" }
+                  Hint { keys: ["esc"]; label: "cancel" }
+                }
+                Row {
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  visible: !root.helpOpen && root.phase === "crashed" && !root.highScoreEntry
                   spacing: Style.spacing.lg
 
                   Hint { keys: ["space", "r"]; label: "new board" }
-                  Hint { keys: ["1", "2", "3"]; label: "level" }
+                  Hint { keys: ["1", "2", "3", "4"]; label: "level" }
                 }
                 Row {
                   anchors.horizontalCenter: parent.horizontalCenter
@@ -2038,12 +2853,158 @@ Item {
 
                   Hint { keys: ["space", "p"]; label: "go" }
                 }
+                }
+
+                // ---- start menu: shown at cold boot, and reopenable via the
+                // "garage" button in the live readout (only while actually
+                // playing, so it can never end up layered under the wrecked
+                // or help card — see the guards on that button, and on
+                // handleKey's own menuOpen block which owns the keyboard
+                // outright while this is up, the same way name entry does).
+                Column {
+                  width: parent.width
+                  spacing: Style.spacing.lg
+                  visible: root.menuOpen
+
+                  Text {
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    text: "omacircuit"
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.heading
+                    font.bold: true
+                  }
+
+                  Column {
+                    width: parent.width
+                    spacing: Style.spacing.sm
+
+                    Text {
+                      width: parent.width
+                      horizontalAlignment: Text.AlignHCenter
+                      text: "choose your car"
+                      color: root.fade(root.foreground, 0.55)
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      font.bold: true
+                    }
+
+                    Row {
+                      anchors.horizontalCenter: parent.horizontalCenter
+                      spacing: Style.spacing.lg
+
+                      Repeater {
+                        model: 3
+
+                        Rectangle {
+                          id: pickSlot
+                          required property int index
+                          readonly property bool picked: root.chosenCar === index
+                          width: Style.space(56)
+                          height: Style.space(56)
+                          radius: Style.space(8)
+                          color: picked ? root.fade(root.carHues[index], 0.18)
+                               : pickHover.hovered ? root.fade(root.gridNeon, 0.10) : "transparent"
+                          border.width: Math.max(1, Style.space(2))
+                          border.color: picked ? root.carHues[index]
+                               : pickHover.hovered ? root.fade(root.gridNeon, 0.6) : root.fade(root.gridNeon, 0.35)
+
+                          Racer {
+                            anchors.centerIn: parent
+                            cell: Style.space(34)
+                            variant: pickSlot.index
+                            tint: root.carHues[pickSlot.index]
+                            idle: true
+                          }
+
+                          HoverHandler { id: pickHover }
+                          TapHandler { onTapped: root.setChosenCar(pickSlot.index) }
+                        }
+                      }
+                    }
+                  }
+
+                  // The level's own top five, medals and all — the same
+                  // reason it's already pinned to the wrecked card: the
+                  // number to chase is worth seeing before the run that
+                  // chases it, not just after.
+                  Column {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    visible: (root.highScores[root.spec.key] || []).length > 0
+                    spacing: Style.spacing.xxs
+
+                    Text {
+                      anchors.horizontalCenter: parent.horizontalCenter
+                      text: "top scores · " + root.spec.name
+                      color: root.fade(root.foreground, 0.55)
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      font.bold: true
+                    }
+                    Repeater {
+                      model: (root.highScores[root.spec.key] || []).slice(0, 3)
+                      Row {
+                        required property var modelData
+                        required property int index
+                        spacing: Style.spacing.sm
+
+                        Medal { rank: index + 1; width: Style.space(26); height: width; anchors.verticalCenter: parent.verticalCenter }
+                        Text {
+                          width: Style.space(46)
+                          anchors.verticalCenter: parent.verticalCenter
+                          text: modelData.name
+                          color: root.dim
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.caption
+                          font.bold: true
+                        }
+                        Text {
+                          width: Style.space(36)
+                          anchors.verticalCenter: parent.verticalCenter
+                          horizontalAlignment: Text.AlignRight
+                          text: modelData.score
+                          color: root.coinColor
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.caption
+                        }
+                      }
+                    }
+                  }
+
+                  Rectangle {
+                    id: startBtn
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: startText.implicitWidth + Style.spacing.lg * 2
+                    height: startText.implicitHeight + Style.spacing.sm * 2
+                    radius: height / 2
+                    color: root.fade(root.carHues[root.chosenCar], startHover.hovered ? 0.28 : 0.18)
+                    border.width: Math.max(1, Style.space(2))
+                    border.color: root.carHues[root.chosenCar]
+
+                    Text {
+                      id: startText
+                      anchors.centerIn: parent
+                      text: "start · space"
+                      color: root.foreground
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.body
+                      font.bold: true
+                    }
+
+                    HoverHandler { id: startHover }
+                    TapHandler { onTapped: root.menuOpen = false }
+                  }
+                }
+              }
               }
             }
 
             TapHandler {
               onTapped: {
-                if (root.helpOpen) root.helpOpen = false
+                if (root.menuOpen) { /* only the start button and Space begin */ }
+                else if (root.helpOpen) root.helpOpen = false
+                else if (root.highScoreEntry) { /* tapping through initials does nothing */ }
                 else if (root.phase === "crashed") root.newGame()
                 else root.phase = "running"
               }
@@ -2055,6 +3016,10 @@ Item {
           // vertical space to work.
           Row {
             id: readout
+            // The overlay scrim now reaches down over this row too (see the
+            // note on `overlay` above) so the card always has room — no
+            // reason to leave this showing half-dimmed underneath it.
+            visible: root.phase === "running" && !root.helpOpen && !root.menuOpen
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: Style.spacing.xl
 
@@ -2122,7 +3087,7 @@ Item {
             }
 
             // This used to read "cars 3", which is a number you then have to map onto
-            // three coloured shapes on the board. Drawing the shapes themselves skips
+            // three colored shapes on the board. Drawing the shapes themselves skips
             // the mapping, and it is the only place the three silhouettes can be
             // compared side by side.
             Row {
@@ -2134,11 +3099,74 @@ Item {
                 Racer {
                   anchors.verticalCenter: parent.verticalCenter
                   cell: Math.round(Style.font.subtitle * 2.0)
-                  variant: index
-                  tint: root.carHues[index % root.carHues.length]
+                  variant: root.variantFor(index)
+                  tint: root.carColor(index)
+                  isPlayer: !!(root.cars[index] && root.cars[index].player)
                   idle: true
                 }
               }
+            }
+
+            Rectangle {
+              anchors.verticalCenter: parent.verticalCenter
+              width: 1
+              height: Math.round(Style.font.subtitle * 1.3)
+              color: root.fade(root.gridNeon, 0.40)
+            }
+
+            // `r` already did this at any time, but it only ever showed up
+            // as a key hint buried in the help/wrecked overlays — never
+            // something to click while actually playing.
+            Rectangle {
+              id: newBoardBtn
+              visible: !root.menuOpen
+              anchors.verticalCenter: parent.verticalCenter
+              width: newBoardText.implicitWidth + Style.spacing.md * 2
+              height: newBoardText.implicitHeight + Style.spacing.xs * 2
+              radius: height / 2
+              color: newBoardHover.hovered ? root.fade(root.gridNeon, 0.16) : "transparent"
+              border.width: 1
+              border.color: root.fade(root.gridNeon, 0.45)
+
+              Text {
+                id: newBoardText
+                anchors.centerIn: parent
+                text: "new board"
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+
+              HoverHandler { id: newBoardHover }
+              TapHandler { onTapped: root.newGame() }
+            }
+
+            // Reachable only while actually playing: the menu's own card
+            // shares the same overlay Rectangle as help/paused/wrecked, so
+            // opening it from inside any of those would layer two cards on
+            // top of each other rather than showing either cleanly.
+            Rectangle {
+              id: garageBtn
+              visible: root.phase === "running" && !root.helpOpen && !root.menuOpen
+              anchors.verticalCenter: parent.verticalCenter
+              width: garageText.implicitWidth + Style.spacing.md * 2
+              height: garageText.implicitHeight + Style.spacing.xs * 2
+              radius: height / 2
+              color: garageHover.hovered ? root.fade(root.carHues[root.chosenCar], 0.16) : "transparent"
+              border.width: 1
+              border.color: root.fade(root.carHues[root.chosenCar], 0.45)
+
+              Text {
+                id: garageText
+                anchors.centerIn: parent
+                text: "garage"
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+
+              HoverHandler { id: garageHover }
+              TapHandler { onTapped: root.menuOpen = true }
             }
           }
         }
@@ -2159,7 +3187,7 @@ Item {
 
         Hint { keys: ["\u2190", "\u2191", "\u2193", "\u2192"]; label: "move" }
         Hint { keys: ["space"]; label: "turn the tile" }
-        Hint { keys: ["1", "2", "3"]; label: "level" }
+        Hint { keys: ["1", "2", "3", "4"]; label: "level" }
         Hint { keys: ["?"]; label: "help" }
       }
     }
@@ -2298,7 +3326,7 @@ Item {
       }
 
       // The official Omarchy mark, struck into the face rather than printed on
-      // it: colourised to a darkened cut of the coin's own metal, and squashed
+      // it: colorized to a darkened cut of the coin's own metal, and squashed
       // by the same `face` factor as the disc so it turns with the coin.
       Image {
         id: coinMark
@@ -2361,7 +3389,7 @@ Item {
   }
 
   // A car, drawn from `carBodies` with the same halo/hue/core stack as the
-  // rails. The cockpit and the exhaust are what turn a coloured lozenge into
+  // rails. The cockpit and the exhaust are what turn a colored lozenge into
   // something with a front and a back.
   component Racer: Item {
     id: racer
@@ -2370,6 +3398,10 @@ Item {
     property int variant: 0
     property color tint: root.carHues[0]
     property bool wrecked: false
+    // The gloss finish is about *whose* car this is, not which silhouette
+    // it happens to be wearing — chosenCar can be any of the three variants,
+    // so this can't stay hardcoded to variant 0 anymore.
+    property bool isPlayer: false
     // The readout glyph holds still: a row of flickering exhausts in the
     // header would pull the eye off the board, which is where it belongs.
     property bool idle: false
@@ -2379,7 +3411,7 @@ Item {
     readonly property var body: root.carBodies[variant % root.carBodies.length]
     readonly property var wheels: root.carWheels[variant % root.carWheels.length]
     readonly property var wings: root.carWings[variant % root.carWings.length]
-    // Rubber, not paint. Dark enough to read as a tyre against the body, with
+    // Rubber, not paint. Dark enough to read as a tire against the body, with
     // a lit rim so it still belongs on a neon board.
     readonly property color rubber: root.mix(root.background, "#000000", 0.55)
 
@@ -2456,9 +3488,9 @@ Item {
         border.width: Math.max(1, racer.cell * 0.014)
         border.color: root.fade(racer.skin, 0.60)
 
-        // A chrome hub rather than one tinted to the body colour. Die-cast
+        // A chrome hub rather than one tinted to the body color. Die-cast
         // wheels are the one part that never matches the paint job — they're
-        // stamped metal on every casting regardless of colourway — and a
+        // stamped metal on every casting regardless of colorway — and a
         // hub that took the car's hue instead read as a fourth body panel.
         Rectangle {
           anchors.centerIn: parent
@@ -2513,7 +3545,7 @@ Item {
         capStyle: ShapePath.RoundCap
         PathPolyline { path: racer.outline() }
       }
-      // A knockout in the board's own colour, between the halo and the body.
+      // A knockout in the board's own color, between the halo and the body.
       // The car drives along a route beam of exactly its own hue, and without
       // this its nose dissolves into the beam it is following.
       ShapePath {
@@ -2526,15 +3558,36 @@ Item {
       }
       ShapePath {
         fillColor: root.fade(racer.skin, 0.92)
+        // The player's own car gets a real light-to-dark sheen instead of
+        // the flat tint every traffic car on the board uses — "why single
+        // colored cars, make it stand out" was a fair complaint, and the
+        // honest answer is that the traffic cars stay flat on purpose
+        // (they're background, not you) while the one you're actually
+        // flying gets the paint job. `fillGradient: null` on every other
+        // car falls back to the flat `fillColor` above it.
+        fillGradient: racer.isPlayer ? bodyGloss : null
         strokeColor: root.core(racer.skin)
         strokeWidth: Math.max(1, racer.cell * 0.035)
         joinStyle: ShapePath.RoundJoin
         PathPolyline { path: racer.outline() }
+
+        // A plain child here would default onto ShapePath's own
+        // pathElements list instead of becoming a gradient (and warn:
+        // "Cannot assign QQuickShapeLinearGradient to list property
+        // pathElements") — declaring it as a property is what makes it a
+        // value the fillGradient binding above can actually point to.
+        property Gradient bodyGloss: LinearGradient {
+          x1: 0; y1: 0
+          x2: racer.cell; y2: racer.cell
+          GradientStop { position: 0.0; color: root.mix(racer.skin, "#ffffff", 0.5) }
+          GradientStop { position: 0.5; color: racer.skin }
+          GradientStop { position: 1.0; color: root.mix(racer.skin, "#000000", 0.42) }
+        }
       }
       // A die-cast casting has a crisp dark panel line at the body edge
-      // regardless of paint colour — without it the neon core-stroke above
+      // regardless of paint color — without it the neon core-stroke above
       // is the only edge the eye gets, and that edge is the same hue as the
-      // fill, which reads as glow rather than as a moulded body line.
+      // fill, which reads as glow rather than as a molded body line.
       ShapePath {
         fillColor: "transparent"
         strokeColor: root.fade(root.mix(racer.skin, "#000000", 0.72), 0.85)
@@ -2544,7 +3597,7 @@ Item {
       }
     }
 
-    // A centre racing stripe, painted over the body rather than into its
+    // A center racing stripe, painted over the body rather than into its
     // outline. The body is narrow — its own outline is at most ~0.2 cell
     // wide at the cockpit — so the stripe has to be thinner than that to
     // read as a stripe rather than as the body's whole paint job. A pinstripe
@@ -2565,8 +3618,8 @@ Item {
     // cockpit, which is what stops a flat-filled shape from reading as flat.
     // Real paint has a highlight that does not depend on the hue underneath
     // it, so this is the same white streak on every car regardless of
-    // colour. `body` coordinates run from about -0.29 to +0.38 with the nose
-    // at +x, so the cockpit sits noticeably forward of centre.
+    // color. `body` coordinates run from about -0.29 to +0.38 with the nose
+    // at +x, so the cockpit sits noticeably forward of center.
     Rectangle {
       x: racer.cell * 0.58
       y: racer.cell * 0.40
@@ -2580,7 +3633,7 @@ Item {
 
     // A tinted canopy rather than a flat bright dot. Real glass is dark until
     // something catches it, so the shape that says "cockpit" is a dark lens
-    // with one small bright glint on it, not a headlamp-coloured blob
+    // with one small bright glint on it, not a headlamp-colored blob
     // sitting on top of the paint.
     Rectangle {
       x: racer.cell * 0.54 - width / 2
@@ -2608,6 +3661,46 @@ Item {
   }
 
   // ------------------------------------------------------------------ chrome
+
+  // Gold, silver, bronze for the top three — drawn rather than emoji, same
+  // as everything else on this board, so a medal reads as part of the same
+  // object language as the coins and cars sitting next to it instead of a
+  // borrowed system glyph in a different style entirely.
+  component Medal: Rectangle {
+    id: medal
+    property int rank: 1
+    readonly property color tone: rank === 1 ? "#fbbf24" : rank === 2 ? "#cbd5e1" : "#c2703d"
+
+    width: Style.space(26)
+    height: width
+    radius: width / 2
+    color: root.mix(tone, "#000000", 0.20)
+    border.width: Math.max(1, Style.space(2))
+    border.color: root.core(tone)
+
+    // The same official Omarchy mark the omacoins carry, struck into the
+    // medal the same way (colorized to a darkened cut of its own metal) so
+    // a medal reads as "an omacoin, just gold/silver/bronze" rather than a
+    // separate badge language with its own rank digit.
+    Image {
+      id: medalMark
+      anchors.centerIn: parent
+      width: medal.width * 0.62
+      height: width
+      source: root.omarchyIcon
+      fillMode: Image.PreserveAspectFit
+      sourceSize.width: 96
+      sourceSize.height: 96
+      smooth: true
+      visible: false
+    }
+    MultiEffect {
+      anchors.fill: medalMark
+      source: medalMark
+      colorization: 1.0
+      colorizationColor: root.mix(medal.tone, "#000000", 0.55)
+    }
+  }
 
   // A key, drawn as a key. The status line used to be one run-on sentence of
   // words and interpuncts, which is legible but says "prose" when what it is
