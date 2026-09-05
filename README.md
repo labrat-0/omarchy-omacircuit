@@ -11,6 +11,17 @@ the board recolors with the desktop.
 ## Preview
 
 <p align="center">
+  <video src="https://github.com/labrat-0/omarchy-omacircuit/raw/master/docs/omacircuit-demo.mp4" controls muted width="900"></video>
+</p>
+
+<p align="center">
+  <em>
+    If the player does not load,
+    <a href="docs/omacircuit-demo.mp4">watch the demo (MP4)</a>.
+  </em>
+</p>
+
+<p align="center">
   <img src="preview.png" alt="Omacircuit on Endurance: three cars, coins, obstacles, and a live route bending toward a hazard" width="900">
 </p>
 
@@ -359,6 +370,6 @@ TypeError: Cannot assign to read-only property "omarchyPath"
 | `Panel.qml` | The whole game: model, board, window, keys |
 | `BarWidget.qml` | The 🏁 bar button; owns no state, just toggles the panel |
 | `preview.png` | Marketplace card/detail source (unoptimized screenshot) |
-| `docs/` | Extra README screenshots; not used by the marketplace |
+| `docs/` | Extra README screenshots and the demo clip; not used by the marketplace |
 | `LICENSE` | MIT |
 | `~/.local/state/omacircuit/state.json` | Best score, top-five names, last level, chosen car |
