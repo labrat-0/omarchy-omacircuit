@@ -1,0 +1,209 @@
+#!/usr/bin/python3 -I
+# Omacircuit's score file, read and written through descriptors.
+#
+# Panel.qml never touches ~/.local/state/omacircuit/state.json by pathname.
+# It launches this helper as /usr/bin/python3 -I with an environment of
+# exactly {HOME}, and everything below is relative to a descriptor that has
+# already been checked: each directory on the way down is opened O_NOFOLLOW
+# from its parent's descriptor and proven to be a directory owned by this
+# uid; the file is opened O_NOFOLLOW|O_NONBLOCK from that descriptor and
+# proven to be a small regular file owned by this uid; the replacement is a
+# fresh O_EXCL temporary in the same directory, fsynced, then renamed over
+# the target via the directory descriptor. A symlink, FIFO, foreign-owned
+# entry or oversized file at any of those positions is refused, never
+# followed, and a refusal on read also switches persistence off for the
+# session so a file we would not read is never overwritten either.
+#
+#   omacircuit-state read    prints the file's bytes (nothing if absent), 0
+#   omacircuit-state write   replaces the file with stdin, 0
+#
+# Exit 2 means the state hierarchy was refused; 3 means the payload was.
+# Stdlib only. Nothing here is specific to this game beyond the paths.
+
+import errno
+import json
+import os
+import stat
+import sys
+
+STATE_PARTS = (".local", "state", "omacircuit")
+STATE_FILE = "state.json"
+LIMIT = 16 * 1024  # bytes; a full file is a few hundred
+UID = os.getuid()
+
+DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+
+
+class Refused(Exception):
+    pass
+
+
+def owned_dir(fd, what):
+    st = os.fstat(fd)
+    if not stat.S_ISDIR(st.st_mode):
+        raise Refused("%s is not a directory" % what)
+    if st.st_uid != UID:
+        raise Refused("%s is not owned by uid %d" % (what, UID))
+    return fd
+
+
+def open_home():
+    home = os.environ.get("HOME", "")
+    if not home.startswith("/") or "\0" in home:
+        raise Refused("HOME is not an absolute path")
+    # HOME itself may legitimately resolve through a symlink (that is the
+    # account's business); it still has to end at a directory this uid owns.
+    fd = os.open(home, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    return owned_dir(fd, "HOME")
+
+
+def open_dir_nofollow(fd, name):
+    # Linux answers O_DIRECTORY|O_NOFOLLOW on a symlink with ELOOP or ENOTDIR
+    # depending on what it points at; both mean "not a plain directory here".
+    try:
+        return os.open(name, DIR_FLAGS, dir_fd=fd)
+    except OSError as e:
+        if e.errno in (errno.ELOOP, errno.ENOTDIR):
+            raise Refused("%s is a symlink or not a directory" % name)
+        raise
+
+
+def descend(fd, name, create):
+    # Open `name` inside the verified directory `fd` without following a
+    # symlink at that position. mkdir happily returns EEXIST for a symlink
+    # to a directory, so the O_NOFOLLOW open afterwards is what decides.
+    try:
+        nfd = open_dir_nofollow(fd, name)
+    except FileNotFoundError:
+        if not create:
+            raise
+        try:
+            os.mkdir(name, 0o700, dir_fd=fd)
+        except FileExistsError:
+            pass
+        nfd = open_dir_nofollow(fd, name)
+    try:
+        return owned_dir(nfd, name)
+    except Refused:
+        os.close(nfd)
+        raise
+
+
+def open_state_dir(create):
+    fd = open_home()
+    try:
+        for part in STATE_PARTS:
+            nfd = descend(fd, part, create)
+            os.close(fd)
+            fd = nfd
+    except BaseException:
+        os.close(fd)
+        raise
+    return fd
+
+
+def read_all(fd, limit):
+    chunks = []
+    total = 0
+    while total <= limit:
+        buf = os.read(fd, limit + 1 - total)
+        if not buf:
+            break
+        chunks.append(buf)
+        total += len(buf)
+    return b"".join(chunks)
+
+
+def cmd_read():
+    try:
+        dfd = open_state_dir(create=False)
+    except FileNotFoundError:
+        return b""
+    try:
+        try:
+            fd = os.open(STATE_FILE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+                         | os.O_CLOEXEC, dir_fd=dfd)
+        except FileNotFoundError:
+            return b""
+        except OSError as e:
+            if e.errno == errno.ELOOP:
+                raise Refused("%s is a symlink" % STATE_FILE)
+            raise
+        try:
+            st = os.fstat(fd)
+            if not stat.S_ISREG(st.st_mode):
+                raise Refused("%s is not a regular file" % STATE_FILE)
+            if st.st_uid != UID:
+                raise Refused("%s is not owned by uid %d" % (STATE_FILE, UID))
+            if st.st_size > LIMIT:
+                raise Refused("%s is larger than %d bytes" % (STATE_FILE, LIMIT))
+            data = read_all(fd, LIMIT)
+            if len(data) > LIMIT:
+                raise Refused("%s grew past %d bytes" % (STATE_FILE, LIMIT))
+            return data
+        finally:
+            os.close(fd)
+    finally:
+        os.close(dfd)
+
+
+def cmd_write():
+    data = read_all(sys.stdin.buffer.fileno(), LIMIT)
+    if len(data) > LIMIT:
+        raise Refused("payload is larger than %d bytes" % LIMIT)
+    try:
+        doc = json.loads(data.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        raise Refused("payload is not JSON")
+    if not isinstance(doc, dict):
+        raise Refused("payload is not a JSON object")
+
+    dfd = open_state_dir(create=True)
+    try:
+        tmp = ".%s.%s.tmp" % (STATE_FILE, os.urandom(6).hex())
+        tfd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+                      | os.O_CLOEXEC, 0o600, dir_fd=dfd)
+        try:
+            view = memoryview(data)
+            while view:
+                n = os.write(tfd, view)
+                view = view[n:]
+            os.fsync(tfd)
+            os.close(tfd)
+            tfd = -1
+            os.rename(tmp, STATE_FILE, src_dir_fd=dfd, dst_dir_fd=dfd)
+            os.fsync(dfd)
+        except BaseException:
+            if tfd >= 0:
+                os.close(tfd)
+            try:
+                os.unlink(tmp, dir_fd=dfd)
+            except OSError:
+                pass
+            raise
+    finally:
+        os.close(dfd)
+
+
+def main(argv):
+    if len(argv) != 2 or argv[1] not in ("read", "write"):
+        sys.stderr.write("usage: omacircuit-state read|write\n")
+        return 64
+    try:
+        if argv[1] == "read":
+            out = cmd_read()
+            sys.stdout.buffer.write(out)
+            sys.stdout.buffer.flush()
+        else:
+            cmd_write()
+        return 0
+    except Refused as e:
+        sys.stderr.write("omacircuit-state: refused: %s\n" % e)
+        return 3 if str(e).startswith("payload") else 2
+    except OSError as e:
+        sys.stderr.write("omacircuit-state: %s\n" % e)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

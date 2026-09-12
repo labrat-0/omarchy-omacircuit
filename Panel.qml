@@ -1160,13 +1160,32 @@ Item {
   readonly property string omaRoot: Quickshell.env("OMARCHY_PATH") || "/usr/share/omarchy"
   readonly property string omarchyIcon: "file://" + root.omaRoot + "/icon.png"
 
-  // Scores live under XDG state, never under ~/.config. HOME must be a real
-  // absolute path: an empty HOME would otherwise mkdir -p /.local/state/...
+  // Scores live under XDG state, never under ~/.config. The panel never
+  // opens ~/.local/state/omacircuit/state.json by pathname: every read and
+  // write goes through bin/omacircuit-state, which walks HOME -> .local ->
+  // state -> omacircuit descriptor by descriptor with O_NOFOLLOW and
+  // owner/type checks at each step, bounds the read, and replaces the file
+  // with an O_EXCL temporary renamed through the verified directory
+  // descriptor. It runs as /usr/bin/python3 -I (absolute interpreter, no
+  // PYTHON* or user-site influence) with an environment of exactly {HOME}
+  // rather than whatever the shell process inherited. HOME must already be
+  // a real absolute path here; the helper refuses anything else again.
   readonly property string home: Quickshell.env("HOME") || ""
-  readonly property string stateDir: (root.home.charAt(0) === "/" && root.home.indexOf("..") === -1)
-    ? root.home + "/.local/state/omacircuit" : ""
-  readonly property string statePath: root.stateDir !== "" ? root.stateDir + "/state.json" : ""
+  readonly property bool homeOk: root.home.charAt(0) === "/" && root.home.indexOf("..") === -1
+  readonly property string stateHelper: {
+    var u = Qt.resolvedUrl("bin/omacircuit-state").toString()
+    return u.indexOf("file://") === 0 ? decodeURIComponent(u.substring(7)) : ""
+  }
+  readonly property var stateCommand: ["/usr/bin/python3", "-I", "-S", "-B", "--", root.stateHelper]
+  // The helper enforces the same ceiling before it hands the bytes over;
+  // this is the panel refusing to JSON.parse anything larger regardless.
+  readonly property int stateLimit: 16 * 1024
   property bool stateLoaded: false
+  // Cleared when the helper refuses the existing hierarchy (a symlink, a
+  // FIFO, a foreign owner, an oversized file): a file we would not read is
+  // not one we will overwrite either. Scores then last for the session only.
+  property bool stateWritable: true
+  property bool stateDirty: false
 
   function clampInt(n, lo, hi, fallback) {
     n = Number(n)
@@ -1190,8 +1209,10 @@ Item {
 
   function applyState(raw) {
     var wantLevel = root.level
+    raw = String(raw || "")
+    if (raw.length > root.stateLimit) raw = ""
     try {
-      var s = JSON.parse(String(raw || ""))
+      var s = JSON.parse(raw)
       if (s && typeof s === "object") {
         var b = {}
         if (s.bests && typeof s.bests === "object") {
@@ -1237,33 +1258,51 @@ Item {
   }
 
   function writeState() {
-    if (!root.stateLoaded || root.statePath === "") return
-    stateFile.setText(JSON.stringify({
+    if (!root.stateLoaded || !root.stateWritable || !root.homeOk || root.stateHelper === "") return
+    var payload = JSON.stringify({
       version: 3,
       bests: root.bests,
       highScores: root.highScores,
       level: root.level,
       chosenCar: root.chosenCar
-    }))
-  }
-
-  FileView {
-    id: stateFile
-    path: root.statePath
-    atomicWrites: true
-    printErrors: false
-    onLoaded: root.applyState(text())
-    onLoadFailed: function(err) { root.applyState("") }
+    })
+    if (payload.length > root.stateLimit) return
+    // One helper at a time; a write that lands mid-flight is kept and sent
+    // when this one exits, so only the newest state ever reaches the disk.
+    if (stateWriter.running) { root.stateDirty = true; return }
+    root.stateDirty = false
+    stateWriter.running = true
+    stateWriter.write(payload)
+    stateWriter.stdinEnabled = false  // EOF: the helper reads to end
   }
 
   Process {
-    id: mkStateDir
-    command: ["mkdir", "-p", "--", root.stateDir]
-    onExited: stateFile.reload()
+    id: stateReader
+    command: root.stateCommand.concat(["read"])
+    clearEnvironment: true
+    environment: ({ "HOME": root.home })
+    stdout: StdioCollector { id: stateReadOut }
+    onExited: function(code) {
+      if (code !== 0) root.stateWritable = false
+      root.applyState(code === 0 ? stateReadOut.text : "")
+    }
+  }
+
+  Process {
+    id: stateWriter
+    command: root.stateCommand.concat(["write"])
+    clearEnvironment: true
+    environment: ({ "HOME": root.home })
+    stdinEnabled: true
+    onExited: function(code) {
+      stateWriter.stdinEnabled = true  // re-arm for the next launch
+      if (code !== 0) { root.stateWritable = false; root.stateDirty = false; return }
+      if (root.stateDirty) root.writeState()
+    }
   }
 
   Component.onCompleted: {
-    if (root.stateDir !== "") mkStateDir.running = true
+    if (root.homeOk && root.stateHelper !== "") stateReader.running = true
     else root.applyState("")
     root.newGame()
     // Deferred a tick so this is a real false->true transition the

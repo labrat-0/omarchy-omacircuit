@@ -41,7 +41,8 @@ That adds a 🏁 button to the bar. Click it, or:
 omarchy-shell shell toggle io.github.labrat-0.omacircuit
 ```
 
-The plugin is pure QML on modules Omarchy's shell already ships. It does not
+The plugin is pure QML on modules Omarchy's shell already ships, plus one
+small stdlib-only Python helper that owns the high-score file. It does not
 reach the network, does not change `~/.config/omarchy/shell.json` itself, and
 writes only its own high-score file under `~/.local/state/omacircuit/`.
 
@@ -302,9 +303,11 @@ key instead, or to toggle it from a script:
 omarchy-shell shell toggle io.github.labrat-0.omacircuit
 ```
 
-No external dependencies — the plugin is pure QML, built entirely on modules
+No external dependencies — the game is pure QML, built entirely on modules
 Omarchy's shell already ships (`QtQuick.Shapes`, `QtQuick.Particles`,
-`QtQuick.Effects`). Nothing to install beyond the plugin itself.
+`QtQuick.Effects`). The score file is handled by `bin/omacircuit-state`, a
+stdlib-only script run through `/usr/bin/python3`, which Omarchy's base
+install already carries. Nothing to install beyond the plugin itself.
 
 Before publishing a local checkout, the same check the marketplace and
 `omarchy plugin add` run:
@@ -337,8 +340,39 @@ rm -rf ~/.local/state/omacircuit
 
 Nothing else on the system is touched. The plugin makes **no network
 requests**, needs no extra packages or credentials, does not rewrite
-`~/.config/omarchy/shell.json`, and starts no process beyond a `mkdir -p` of
-that state directory. Scores are user-owned data, not configuration.
+`~/.config/omarchy/shell.json`, and starts no process beyond its own
+`bin/omacircuit-state` helper. Scores are user-owned data, not configuration.
+
+### How the state file is handled
+
+`Panel.qml` never opens `state.json` by pathname. Every read and write goes
+through `bin/omacircuit-state`, launched as `/usr/bin/python3 -I -S -B` (an
+absolute interpreter, isolated from `PYTHON*` variables and user site
+packages) with an environment of exactly `HOME` — nothing is inherited from
+the shell process. The helper:
+
+- walks `$HOME` → `.local` → `state` → `omacircuit` one directory at a time,
+  each opened `O_NOFOLLOW` relative to its parent's descriptor and checked
+  with `fstat` to be a directory owned by the current uid; missing
+  directories are created `0700`;
+- opens `state.json` `O_NOFOLLOW|O_NONBLOCK` from that descriptor and reads
+  it only if `fstat` shows a regular file owned by the current uid of at
+  most 16 KiB — the panel applies the same 16 KiB ceiling again before
+  `JSON.parse`;
+- writes by creating an `O_EXCL` temporary in the verified directory,
+  `fsync`ing it, and `renameat`ing it over `state.json` through the same
+  directory descriptor, then `fsync`ing the directory;
+- refuses a symlink, FIFO, foreign-owned entry, or oversized file at any of
+  those positions. A refusal on read also switches persistence off for the
+  session, so a file the plugin would not read is never overwritten either;
+  scores then last until the panel is closed.
+
+Exercise it directly against a scratch home if you want to see the refusals:
+
+```bash
+HOME=/tmp/scratch-home /usr/bin/python3 -I bin/omacircuit-state read
+echo '{"version":3}' | HOME=/tmp/scratch-home /usr/bin/python3 -I bin/omacircuit-state write
+```
 
 ## Developing it
 
@@ -369,6 +403,7 @@ TypeError: Cannot assign to read-only property "omarchyPath"
 | `manifest.json` | Plugin manifest: `panel` + `bar-widget`, nothing kept loaded |
 | `Panel.qml` | The whole game: model, board, window, keys |
 | `BarWidget.qml` | The 🏁 bar button; owns no state, just toggles the panel |
+| `bin/omacircuit-state` | Descriptor-bound read/write of the score file; the only process the panel starts |
 | `preview.png` | Marketplace card/detail source (unoptimized screenshot) |
 | `docs/` | Extra README screenshots and the demo clip; not used by the marketplace |
 | `LICENSE` | MIT |
